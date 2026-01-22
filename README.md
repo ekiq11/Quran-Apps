@@ -1,8 +1,5 @@
 # 🕌 Bekal Muslim
 
-<div align="center">
-  <img src="assets/logo.png" alt="Bekal Muslim Logo" width="150"/>
-  
   ### Aplikasi Spiritual Muslim Lengkap
   **Al-Quran Digital • Doa Sehari-hari • Dzikir & Wirid**
   
