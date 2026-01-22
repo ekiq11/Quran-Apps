@@ -65,7 +65,7 @@ Aplikasi ini dibangun menggunakan:
 ## 📱 Screenshot
 
 <div align="center">
-  <img src="screenshots/home.png" width="200"/>
+  <img src="https://github.com/ekiq11/Quran-Apps/blob/master/WhatsApp%20Image%202026-01-15%20at%2012.24.50.jpeg?raw=true" width="200"/>
   <img src="screenshots/quran.png" width="200"/>
   <img src="screenshots/doa.png" width="200"/>
   <img src="screenshots/dzikir.png" width="200"/>
