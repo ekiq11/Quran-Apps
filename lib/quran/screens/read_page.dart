@@ -1,8 +1,10 @@
-// screens/quran_read_page.dart - WITH DARK MODE SUPPORT
+// screens/quran_read_page.dart - WITH JUMP TO AYAH FEATURE
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:myquran/quran/helper/jump_ayat.dart';
 import 'package:myquran/quran/helper/overlay.dart';
 import 'package:myquran/quran/helper/scroll_helper.dart';
+
 import 'package:myquran/screens/util/theme.dart';
 import 'package:myquran/quran/model/surah_model.dart';
 import 'package:myquran/quran/service/quran_service.dart';
@@ -10,6 +12,7 @@ import 'package:myquran/quran/service/audio_service.dart';
 import 'package:myquran/quran/widget/ayat_list_item.dart';
 import 'package:myquran/quran/widget/quran_dialog.dart';
 import 'package:myquran/quran/widget/quran_app_bar.dart';
+
 
 class QuranReadPage extends StatefulWidget {
   final int surahNumber;
@@ -39,10 +42,14 @@ class _QuranReadPageState extends State<QuranReadPage> {
   bool _showTranslation = true;
   bool _showTransliteration = true;
   bool _showTajwid = false;
-  bool _isDarkMode = false; // ✅ ADDED
+  bool _isDarkMode = false;
   Set<int> _bookmarkedAyahs = {};
   bool _hasReachedEnd = false;
   bool _showLastReadBanner = true;
+  bool _hasShownDialog = false;
+  bool _showNavigationFABs = false;
+  String? _nextSurahName;
+  String? _previousSurahName;
   
   int? _lastReadAyah;
   int? _targetAyah;
@@ -89,11 +96,31 @@ class _QuranReadPageState extends State<QuranReadPage> {
     const threshold = 100.0;
     
     if (currentScroll >= (maxScroll - threshold) && !_hasReachedEnd) {
-      _hasReachedEnd = true;
-      _showNextSurahDialog();
+      setState(() => _hasReachedEnd = true);
+      _showCompletionDialog();
+    }
+    
+    if (currentScroll < (maxScroll - 300) && _hasReachedEnd) {
+      setState(() => _hasReachedEnd = false);
     }
 
     _detectVisibleAyahAndSave();
+  }
+
+  void _showCompletionDialog() {
+    if (!mounted || _surah == null || _hasShownDialog || widget.surahNumber >= 114) return;
+    
+    setState(() => _hasShownDialog = true);
+    
+    QuranDialogs.showNextSurahDialog(
+      context: context,
+      currentSurahName: _surah!.nameLatin,
+      currentSurahNumber: widget.surahNumber,
+      onContinue: _goToNextSurah,
+      onLater: () {
+        setState(() => _showNavigationFABs = true);
+      },
+    );
   }
 
   void _detectVisibleAyahAndSave() {
@@ -163,26 +190,64 @@ class _QuranReadPageState extends State<QuranReadPage> {
     }
   }
 
-  void _showNextSurahDialog() {
-    if (!mounted || _surah == null || widget.surahNumber >= 114) return;
+  void _goToNextSurah() {
+    if (widget.surahNumber >= 114) {
+      _showErrorSnackbar('Ini sudah surah terakhir');
+      return;
+    }
     
-    QuranDialogs.showNextSurahDialog(
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranReadPage(
+          surahNumber: widget.surahNumber + 1,
+          initialAyah: 1,
+          autoScrollToLastRead: false,
+        ),
+      ),
+    );
+  }
+
+  void _goToPreviousSurah() {
+    if (widget.surahNumber <= 1) {
+      _showErrorSnackbar('Ini sudah surah pertama');
+      return;
+    }
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranReadPage(
+          surahNumber: widget.surahNumber - 1,
+          autoScrollToLastRead: false,
+        ),
+      ),
+    );
+  }
+
+  // ✅ NEW: Show Jump to Ayah Dialog
+  void _showJumpToAyahDialog() {
+    if (_surah == null) return;
+    
+    showDialog(
       context: context,
-      currentSurahName: _surah!.nameLatin,
-      currentSurahNumber: widget.surahNumber,
-      onContinue: () {
-        Navigator.pop(context);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => QuranReadPage(
-              surahNumber: widget.surahNumber + 1,
-              initialAyah: 1,
-              autoScrollToLastRead: false,
-            ),
-          ),
-        );
-      },
+      barrierDismissible: true,
+      builder: (context) => JumpAyahDialog(
+        currentAyah: _currentVisibleAyah ?? 1,
+        totalAyahs: _surah!.len,
+        surahNumber: widget.surahNumber,
+        surahName: _surah!.nameLatin,
+        isDarkMode: _isDarkMode,
+        onJump: (ayahNumber) {
+          // Jump to selected ayah
+          setState(() {
+            _targetAyah = ayahNumber;
+            _isFromLastRead = false;
+            _showLastReadBanner = false;
+          });
+          _performAutoScroll();
+        },
+      ),
     );
   }
 
@@ -198,7 +263,11 @@ class _QuranReadPageState extends State<QuranReadPage> {
         _quranService.getBookmarks(),
         _quranService.getLastRead(),
         _quranService.getShowTajwid(),
-        _quranService.getDarkMode(), // ✅ ADDED
+        _quranService.getDarkMode(),
+        if (widget.surahNumber < 114) 
+          _quranService.loadSurah(widget.surahNumber + 1),
+        if (widget.surahNumber > 1)
+          _quranService.loadSurah(widget.surahNumber - 1),
       ]);
       
       final surah = results[0] as SurahModel?;
@@ -208,7 +277,16 @@ class _QuranReadPageState extends State<QuranReadPage> {
       final bookmarks = results[4] as List<BookmarkModel>;
       final lastReadBookmark = results[5] as BookmarkModel?;
       final showTajwid = results[6] as bool;
-      final isDarkMode = results[7] as bool; // ✅ ADDED
+      final isDarkMode = results[7] as bool;
+      
+      SurahModel? nextSurah;
+      SurahModel? prevSurah;
+      if (widget.surahNumber < 114 && results.length > 8) {
+        nextSurah = results[8] as SurahModel?;
+      }
+      if (widget.surahNumber > 1 && results.length > 9) {
+        prevSurah = results[9] as SurahModel?;
+      }
       
       final bookmarkedAyahs = bookmarks
           .where((b) => b.surahNumber == widget.surahNumber)
@@ -243,13 +321,15 @@ class _QuranReadPageState extends State<QuranReadPage> {
           _showTranslation = showTranslation;
           _showTransliteration = showTransliteration;
           _showTajwid = showTajwid;
-          _isDarkMode = isDarkMode; // ✅ ADDED
+          _isDarkMode = isDarkMode;
           _bookmarkedAyahs = bookmarkedAyahs;
           _targetAyah = targetAyah;
           _isFromLastRead = isFromLastRead;
           _lastReadAyah = lastReadBookmark?.surahNumber == widget.surahNumber 
               ? lastReadBookmark?.ayahNumber 
               : null;
+          _nextSurahName = nextSurah?.nameLatin;
+          _previousSurahName = prevSurah?.nameLatin;
           _isLoading = false;
         });
 
@@ -419,7 +499,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
       showTranslation: _showTranslation,
       showTransliteration: _showTransliteration,
       showTajwid: _showTajwid,
-      isDarkMode: _isDarkMode, // ✅ ADDED
+      isDarkMode: _isDarkMode,
       onFontSizeChanged: (value) {
         setState(() => _fontSize = value);
         _quranService.saveFontSize(value);
@@ -436,7 +516,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
         setState(() => _showTajwid = value);
         _quranService.saveShowTajwid(value);
       },
-      onDarkModeToggled: (value) { // ✅ ADDED
+      onDarkModeToggled: (value) {
         setState(() => _isDarkMode = value);
         _quranService.saveDarkMode(value);
       },
@@ -483,13 +563,21 @@ class _QuranReadPageState extends State<QuranReadPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
-    final theme = QuranTheme(isDark: _isDarkMode); // ✅ ADDED
+    final theme = QuranTheme(isDark: _isDarkMode);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackground, // ✅ CHANGED
+      backgroundColor: theme.scaffoldBackground,
       body: _isLoading
           ? _buildLoadingState(theme)
           : _buildContent(isTablet, theme),
+      // ✅ ADD JUMP TO AYAH FAB
+      floatingActionButton: !_isLoading && _surah != null
+          ? JumpAyahFAB(
+              scrollController: _scrollController,
+              onTap: _showJumpToAyahDialog,
+              isDarkMode: _isDarkMode,
+            )
+          : null,
     );
   }
 
@@ -553,7 +641,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
               showTranslation: _showTranslation,
               showTransliteration: _showTransliteration,
               isTablet: isTablet,
-              isDarkMode: _isDarkMode, // ✅ ADDED
+              isDarkMode: _isDarkMode,
               onBackPressed: () {
                 _audioService.stop();
                 Navigator.pop(context);
@@ -572,6 +660,16 @@ class _QuranReadPageState extends State<QuranReadPage> {
         SimpleScrollLoading(
           targetAyah: _targetAyah ?? 1,
           isVisible: _isScrolling,
+        ),
+        
+        SurahNavigationFABs(
+          scrollController: _scrollController,
+          isVisible: _showNavigationFABs,
+          isDarkMode: _isDarkMode,
+          nextSurahName: _nextSurahName,
+          previousSurahName: _previousSurahName,
+          onNextSurah: widget.surahNumber < 114 ? _goToNextSurah : null,
+          onPreviousSurah: widget.surahNumber > 1 ? _goToPreviousSurah : null,
         ),
       ],
     );
@@ -698,7 +796,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
         left: isTablet ? 24 : 16,
         right: isTablet ? 24 : 16,
         top: topPadding,
-        bottom: isTablet ? 24 : 16,
+        bottom: 100, // Extra padding for FABs
       ),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -712,7 +810,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
               showTranslation: _showTranslation,
               showTransliteration: _showTransliteration,
               showTajwid: _showTajwid,
-              isDarkMode: _isDarkMode, // ✅ ADDED
+              isDarkMode: _isDarkMode,
               isBookmarked: _bookmarkedAyahs.contains(ayahNumber),
               isTargetAyah: _targetAyah == ayahNumber,
               isPlayingThis: _audioService.isAyahPlaying(widget.surahNumber, ayahNumber),

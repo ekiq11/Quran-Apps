@@ -1,4 +1,4 @@
-// screens/settings/notification_settings_page.dart - UPDATED
+// screens/settings/notification_settings_page.dart - v2.0 WITH DOA
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myquran/notification/notification_manager.dart';
@@ -22,11 +22,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _enableMaghrib = true;
   bool _enableIsya = true;
   
-  // Dzikir notifications (auto-calculated from prayer times)
-  bool _enableDzikirPagi = true;  // 30 min after Subuh
-  bool _enableDzikirPetang = true; // 30 min after Ashar
+  // Dzikir notifications
+  bool _enableDzikirPagi = true;
+  bool _enableDzikirPetang = true;
   
-  // Tilawah notifications with custom times
+  // Tilawah notifications
   bool _enableTilawahPagi = true;
   bool _enableTilawahSiang = false;
   bool _enableTilawahMalam = true;
@@ -34,6 +34,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   TimeOfDay _tilawahPagiTime = const TimeOfDay(hour: 6, minute: 0);
   TimeOfDay _tilawahSiangTime = const TimeOfDay(hour: 13, minute: 0);
   TimeOfDay _tilawahMalamTime = const TimeOfDay(hour: 20, minute: 0);
+  
+  // ✅ NEW: Doa notifications
+  bool _enableDoaPagi = true;
+  bool _enableDoaPetang = true;
   
   // Settings
   bool _silentMode = false;
@@ -56,26 +60,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      // Prayer notifications
+      // Prayer
       _enableSubuh = prefs.getBool('notif_enable_subuh') ?? true;
       _enableDzuhur = prefs.getBool('notif_enable_dzuhur') ?? true;
       _enableAshar = prefs.getBool('notif_enable_ashar') ?? true;
       _enableMaghrib = prefs.getBool('notif_enable_maghrib') ?? true;
       _enableIsya = prefs.getBool('notif_enable_isya') ?? true;
       
-      // Dzikir notifications
+      // Dzikir
       _enableDzikirPagi = prefs.getBool('notif_enable_dzikir_pagi') ?? true;
       _enableDzikirPetang = prefs.getBool('notif_enable_dzikir_petang') ?? true;
       
-      // Tilawah notifications
+      // Tilawah
       _enableTilawahPagi = prefs.getBool('notif_enable_tilawah_pagi') ?? true;
       _enableTilawahSiang = prefs.getBool('notif_enable_tilawah_siang') ?? false;
       _enableTilawahMalam = prefs.getBool('notif_enable_tilawah_malam') ?? true;
       
-      // Load custom tilawah times
-      _tilawahPagiTime = _loadTimeFromPrefs(prefs, 'tilawah_time_pagi', const TimeOfDay(hour: 6, minute: 0));
-      _tilawahSiangTime = _loadTimeFromPrefs(prefs, 'tilawah_time_siang', const TimeOfDay(hour: 13, minute: 0));
-      _tilawahMalamTime = _loadTimeFromPrefs(prefs, 'tilawah_time_malam', const TimeOfDay(hour: 20, minute: 0));
+      _tilawahPagiTime = _loadTime(prefs, 'tilawah_time_pagi', const TimeOfDay(hour: 6, minute: 0));
+      _tilawahSiangTime = _loadTime(prefs, 'tilawah_time_siang', const TimeOfDay(hour: 13, minute: 0));
+      _tilawahMalamTime = _loadTime(prefs, 'tilawah_time_malam', const TimeOfDay(hour: 20, minute: 0));
+      
+      // ✅ NEW: Doa
+      _enableDoaPagi = prefs.getBool('notif_enable_doa_pagi') ?? true;
+      _enableDoaPetang = prefs.getBool('notif_enable_doa_petang') ?? true;
       
       // Settings
       _silentMode = prefs.getBool('notification_silent_mode') ?? false;
@@ -92,7 +99,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     });
   }
 
-  TimeOfDay _loadTimeFromPrefs(SharedPreferences prefs, String key, TimeOfDay defaultTime) {
+  TimeOfDay _loadTime(SharedPreferences prefs, String key, TimeOfDay defaultTime) {
     final saved = prefs.getString(key);
     if (saved == null) return defaultTime;
     
@@ -112,17 +119,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     TimeOfDay initialTime;
     
     switch (type) {
-      case 'pagi':
-        initialTime = _tilawahPagiTime;
-        break;
-      case 'siang':
-        initialTime = _tilawahSiangTime;
-        break;
-      case 'malam':
-        initialTime = _tilawahMalamTime;
-        break;
-      default:
-        return;
+      case 'pagi': initialTime = _tilawahPagiTime; break;
+      case 'siang': initialTime = _tilawahSiangTime; break;
+      case 'malam': initialTime = _tilawahMalamTime; break;
+      default: return;
     }
     
     final pickedTime = await showTimePicker(
@@ -134,8 +134,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             colorScheme: const ColorScheme.light(
               primary: Color(0xFF059669),
               onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF111827),
             ),
           ),
           child: child!,
@@ -146,15 +144,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     if (pickedTime != null) {
       setState(() {
         switch (type) {
-          case 'pagi':
-            _tilawahPagiTime = pickedTime;
-            break;
-          case 'siang':
-            _tilawahSiangTime = pickedTime;
-            break;
-          case 'malam':
-            _tilawahMalamTime = pickedTime;
-            break;
+          case 'pagi': _tilawahPagiTime = pickedTime; break;
+          case 'siang': _tilawahSiangTime = pickedTime; break;
+          case 'malam': _tilawahMalamTime = pickedTime; break;
         }
       });
     }
@@ -164,35 +156,38 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Save all prayer settings
+      // Save prayer
       await prefs.setBool('notif_enable_subuh', _enableSubuh);
       await prefs.setBool('notif_enable_dzuhur', _enableDzuhur);
       await prefs.setBool('notif_enable_ashar', _enableAshar);
       await prefs.setBool('notif_enable_maghrib', _enableMaghrib);
       await prefs.setBool('notif_enable_isya', _enableIsya);
       
-      // Save dzikir settings
+      // Save dzikir
       await prefs.setBool('notif_enable_dzikir_pagi', _enableDzikirPagi);
       await prefs.setBool('notif_enable_dzikir_petang', _enableDzikirPetang);
       
-      // Save tilawah settings
+      // Save tilawah
       await prefs.setBool('notif_enable_tilawah_pagi', _enableTilawahPagi);
       await prefs.setBool('notif_enable_tilawah_siang', _enableTilawahSiang);
       await prefs.setBool('notif_enable_tilawah_malam', _enableTilawahMalam);
       
-      // Save tilawah times
       await prefs.setString('tilawah_time_pagi', '${_tilawahPagiTime.hour}:${_tilawahPagiTime.minute}');
       await prefs.setString('tilawah_time_siang', '${_tilawahSiangTime.hour}:${_tilawahSiangTime.minute}');
       await prefs.setString('tilawah_time_malam', '${_tilawahMalamTime.hour}:${_tilawahMalamTime.minute}');
       
-      // Save general settings
+      // ✅ NEW: Save doa
+      await prefs.setBool('notif_enable_doa_pagi', _enableDoaPagi);
+      await prefs.setBool('notif_enable_doa_petang', _enableDoaPetang);
+      
+      // Save settings
       await prefs.setBool('notification_silent_mode', _silentMode);
       await prefs.setBool('notif_show_in_center', _showInCenter);
       
       // Get prayer times
       final prayerTimes = await _prayerTimeService.calculatePrayerTimes();
       
-      // Reschedule notifications
+      // Reschedule
       await _notificationManager.scheduleAllNotifications(
         prayerTimes: prayerTimes.times,
         enabledPrayers: {
@@ -207,9 +202,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           'Siang': _tilawahSiangTime,
           'Malam': _tilawahMalamTime,
         },
+        // ✅ NEW: Doa times (auto-calculated from prayer times)
+        doaTimes: {
+          'Pagi': _addMinutes(prayerTimes.times['Subuh']!, 15),
+          'Petang': _addMinutes(prayerTimes.times['Maghrib']!, 10),
+        },
       );
       
-      // Save update time
       await prefs.setString('last_notification_update', DateTime.now().toIso8601String());
       
       await _loadPendingCount();
@@ -222,6 +221,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     }
   }
 
+  TimeOfDay _addMinutes(TimeOfDay time, int minutes) {
+    final total = time.hour * 60 + time.minute + minutes;
+    return TimeOfDay(hour: (total ~/ 60) % 24, minute: total % 60);
+  }
+
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -232,7 +236,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
-  String _formatTime(TimeOfDay time) {
+  String _fmt(TimeOfDay time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
@@ -246,8 +250,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF059669), Color(0xFF047857)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
           ),
         ),
@@ -272,6 +274,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 _buildDzikirSection(),
                 const SizedBox(height: 16),
                 _buildTilawahSection(),
+                const SizedBox(height: 16),
+                _buildDoaSection(), // ✅ NEW
                 const SizedBox(height: 16),
                 _buildSettingsSection(),
                 const SizedBox(height: 16),
@@ -320,7 +324,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -363,11 +366,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       Icons.mosque,
       const Color(0xFF059669),
       [
-        _buildSwitchTile('Subuh', _enableSubuh, (v) => setState(() => _enableSubuh = v)),
-        _buildSwitchTile('Dzuhur', _enableDzuhur, (v) => setState(() => _enableDzuhur = v)),
-        _buildSwitchTile('Ashar', _enableAshar, (v) => setState(() => _enableAshar = v)),
-        _buildSwitchTile('Maghrib', _enableMaghrib, (v) => setState(() => _enableMaghrib = v)),
-        _buildSwitchTile('Isya', _enableIsya, (v) => setState(() => _enableIsya = v)),
+        _buildSwitch('Subuh', _enableSubuh, (v) => setState(() => _enableSubuh = v)),
+        _buildSwitch('Dzuhur', _enableDzuhur, (v) => setState(() => _enableDzuhur = v)),
+        _buildSwitch('Ashar', _enableAshar, (v) => setState(() => _enableAshar = v)),
+        _buildSwitch('Maghrib', _enableMaghrib, (v) => setState(() => _enableMaghrib = v)),
+        _buildSwitch('Isya', _enableIsya, (v) => setState(() => _enableIsya = v)),
       ],
     );
   }
@@ -378,17 +381,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       Icons.auto_stories,
       const Color(0xFF06B6D4),
       [
-        _buildSwitchTile(
+        _buildSwitch(
           '🌅 Dzikir Pagi', 
           _enableDzikirPagi, 
           (v) => setState(() => _enableDzikirPagi = v),
-          subtitle: '30 menit setelah waktu Subuh',
+          subtitle: '30 menit setelah Subuh',
         ),
-        _buildSwitchTile(
+        _buildSwitch(
           '🌆 Dzikir Petang', 
           _enableDzikirPetang, 
           (v) => setState(() => _enableDzikirPetang = v),
-          subtitle: '30 menit setelah waktu Ashar',
+          subtitle: '30 menit setelah Ashar',
         ),
       ],
     );
@@ -425,23 +428,46 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
+  // ✅ NEW: Doa Section
+  Widget _buildDoaSection() {
+    return _buildSection(
+      'Pengingat Doa',
+      Icons.volunteer_activism,
+      const Color(0xFFA855F7),
+      [
+        _buildSwitch(
+          '🤲 Doa Pagi', 
+          _enableDoaPagi, 
+          (v) => setState(() => _enableDoaPagi = v),
+          subtitle: '15 menit setelah Subuh',
+        ),
+        _buildSwitch(
+          '🌟 Doa Petang', 
+          _enableDoaPetang, 
+          (v) => setState(() => _enableDoaPetang = v),
+          subtitle: '10 menit setelah Maghrib',
+        ),
+      ],
+    );
+  }
+
   Widget _buildSettingsSection() {
     return _buildSection(
       'Pengaturan Umum',
       Icons.settings,
       const Color(0xFF6B7280),
       [
-        _buildSwitchTile(
+        _buildSwitch(
           'Mode Senyap', 
           _silentMode, 
           (v) => setState(() => _silentMode = v),
-          subtitle: 'Notifikasi tanpa suara dan getar',
+          subtitle: 'Notifikasi tanpa suara',
         ),
-        _buildSwitchTile(
-          'Tampilkan di Pusat Notifikasi', 
+        _buildSwitch(
+          'Simpan Riwayat', 
           _showInCenter, 
           (v) => setState(() => _showInCenter = v),
-          subtitle: 'Simpan riwayat notifikasi',
+          subtitle: 'Tampilkan di pusat notifikasi',
         ),
       ],
     );
@@ -461,7 +487,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -481,7 +506,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF111827),
                   ),
                 ),
               ],
@@ -494,21 +518,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {String? subtitle}) {
+  Widget _buildSwitch(String title, bool value, Function(bool) onChanged, {String? subtitle}) {
     return ListTile(
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-            )
-          : null,
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
       trailing: Switch(
         value: value,
         onChanged: onChanged,
@@ -517,89 +530,81 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
-  Widget _buildTimeTile(
-    String title,
-    bool enabled,
-    TimeOfDay time,
-    Function(bool) onChanged,
-    VoidCallback onTimeTap,
-  ) {
-    return ListTile(
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+ Widget _buildTimeTile(
+  String title,
+  bool enabled,
+  TimeOfDay time,
+  Function(bool) onChanged,
+  VoidCallback onTimeTap,
+) {
+  return ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    title: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF111827),
+        letterSpacing: -0.2,
       ),
-      subtitle: Text(
-        _formatTime(time),
-        style: TextStyle(
-          fontSize: 12,
-          color: enabled ? const Color(0xFF059669) : const Color(0xFF6B7280),
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.access_time, size: 20),
-            onPressed: enabled ? onTimeTap : null,
-            color: const Color(0xFF059669),
+    ),
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: enabled ? onTimeTap : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  size: 16,
+                  color: enabled ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _fmt(time),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: enabled ? const Color(0xFF059669) : const Color(0xFF6B7280),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          Switch(
-            value: enabled,
-            onChanged: onChanged,
-            activeColor: const Color(0xFF059669),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 12),
+        Switch(
+          value: enabled,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF059669),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildActionButtons() {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _saveAndReschedule,
-            icon: const Icon(Icons.save),
-            label: const Text('Simpan & Terapkan'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _saveAndReschedule,
+        icon: const Icon(Icons.save),
+        label: const Text('Simpan & Terapkan'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF059669),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () async {
-              await _notificationManager.testNotification();
-              _showSnackBar('🧪 Assalamualaikum!', Colors.blue);
-            },
-            icon: const Icon(Icons.notifications_active),
-            label: const Text('Ahlan Wa Sahlan!'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF059669),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              side: const BorderSide(color: Color(0xFF059669)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-      ],
+      ),
     );
   }
 }

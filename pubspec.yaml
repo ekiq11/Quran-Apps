@@ -58,6 +58,7 @@ dependencies:
   hijri: ^3.0.0
   flutter_foreground_task: ^9.2.0
   workmanager: ^0.9.0+3
+  in_app_update: ^4.2.3 
   
   
   # Update Checker Dependencies
@@ -103,6 +104,9 @@ flutter:
     - assets/quran-json/transliteration/
     - assets/quran-json/terjemahan/
     - assets/quran-json/surah/list-surah.json
+    - assets/json/mahfudzot.json
+    - assets/adzan/adzan.mp3
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -135,5 +139,8 @@ flutter:
     - family: Utsmani
       fonts:
         - asset: assets/font/LPMQIsepMisbah.ttf
+    - family: Arabic
+      fonts:
+        - asset: assets/font/arabic.ttf
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

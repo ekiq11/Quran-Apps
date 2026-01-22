@@ -1,12 +1,16 @@
-// provider/dashboard_provider.dart - MIGRATED TO NotificationManager
-// ✅ CLEAN VERSION - NO ADZAN REFERENCES
+// provider/dashboard_provider.dart - FIXED VERSION
+// ✅ Compatible with NotificationManager v5.1
+// ✅ Mahfudzot Feature Added
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:myquran/model/prayer_time_model.dart';
-import 'package:myquran/notification/notification_manager.dart'; // ✅ CHANGED
+import 'package:myquran/notification/notification_manager.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
 import '../services/prayer_time_service.dart';
 import '../services/location_service.dart';
@@ -17,17 +21,19 @@ class DashboardProvider extends ChangeNotifier {
   final PrayerTimeService _prayerTimeService = PrayerTimeService();
   final LocationService _locationService = LocationService();
   final QuranService _quranService = QuranService();
-  final NotificationManager _notificationManager = NotificationManager(); // ✅ CHANGED
+  final NotificationManager _notificationManager = NotificationManager();
 
   // State
   PrayerTimeModel? _prayerTimeModel;
   BookmarkModel? _lastRead;
   LocationData? _locationData;
+  Map<String, dynamic>? _dailyMahfudzot;
   String _currentTime = '';
   String _currentDate = '';
   bool _isLoadingPrayerTimes = true;
   bool _isLoadingLastRead = true;
   bool _isLoadingLocation = true;
+  bool _isLoadingMahfudzot = true;
   bool _notificationsInitialized = false;
   String _errorMessage = '';
   
@@ -44,11 +50,13 @@ class DashboardProvider extends ChangeNotifier {
   PrayerTimeModel? get prayerTimeModel => _prayerTimeModel;
   BookmarkModel? get lastRead => _lastRead;
   LocationData? get locationData => _locationData;
+  Map<String, dynamic>? get dailyMahfudzot => _dailyMahfudzot;
   String get currentTime => _currentTime;
   String get currentDate => _currentDate;
   bool get isLoadingPrayerTimes => _isLoadingPrayerTimes;
   bool get isLoadingLastRead => _isLoadingLastRead;
   bool get isLoadingLocation => _isLoadingLocation;
+  bool get isLoadingMahfudzot => _isLoadingMahfudzot;
   bool get notificationsInitialized => _notificationsInitialized;
   String get errorMessage => _errorMessage;
   bool get hasError => _errorMessage.isNotEmpty;
@@ -73,6 +81,7 @@ class DashboardProvider extends ChangeNotifier {
     await Future.wait([
       loadLocation(),
       initializeNotifications(),
+      loadDailyMahfudzot(),
     ]);
     
     await loadPrayerTimes();
@@ -90,7 +99,7 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // NOTIFICATION INITIALIZATION - UPDATED
+  // NOTIFICATION INITIALIZATION - FIXED ✅
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   
   Future<void> initializeNotifications() async {
@@ -102,7 +111,7 @@ class DashboardProvider extends ChangeNotifier {
     try {
       print('🔔 Initializing notifications...');
       
-      // ✅ UPDATED: Use NotificationManager's requestPermissions instead
+      // ✅ FIXED: requestPermissions() returns Map<String, bool>
       final permissions = await _notificationManager.requestPermissions();
       final hasPermission = permissions['notification'] == true;
       
@@ -114,11 +123,15 @@ class DashboardProvider extends ChangeNotifier {
       
       _notificationsInitialized = true;
       print('✅ Notifications initialized');
+      print('   Basic Notification: ✅');
       print('   Exact Alarm: ${permissions['exactAlarm'] == true ? '✅' : '❌'}');
+      print('   Schedule Exact: ${permissions['scheduleExactAlarm'] == true ? '✅' : '⚠️'}');
+      print('   Battery Optimization: ${permissions['batteryOptimization'] == true ? '✅' : '⚠️'}');
       
       notifyListeners();
-    } catch (e) {
+    } catch (e, stack) {
       print('❌ Notification init error: $e');
+      print('Stack: $stack');
       _notificationsInitialized = false;
     }
   }
@@ -129,21 +142,22 @@ class DashboardProvider extends ChangeNotifier {
   
   void _startClock() {
     _updateTime();
-    _clockTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateTime();
     });
   }
 
   void _startMidnightCheck() {
-    _midnightCheckTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+    _midnightCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       final now = DateTime.now();
       
-      // At midnight, refresh prayer times
+      // At midnight, refresh prayer times and mahfudzot
       if (now.hour == 0 && now.minute <= 5) {
         if (_prayerTimesUpdateTime == null || 
             !_isSameDay(_prayerTimesUpdateTime!, now)) {
-          print('🕐 Midnight - refreshing prayer times...');
+          print('🕐 Midnight - refreshing prayer times and mahfudzot...');
           loadPrayerTimes(forceRefresh: true);
+          loadDailyMahfudzot();
         }
       }
     });
@@ -152,7 +166,7 @@ class DashboardProvider extends ChangeNotifier {
   void _startAutoRefreshTimers() {
     // Refresh last read every 15 seconds
     _lastReadRefreshTimer = Timer.periodic(
-      Duration(seconds: 15),
+      const Duration(seconds: 15),
       (_) {
         if (_shouldRefreshLastRead()) {
           loadLastRead(silent: true);
@@ -162,7 +176,7 @@ class DashboardProvider extends ChangeNotifier {
 
     // Update prayer info every 30 seconds (UI only)
     _prayerTimeUpdateTimer = Timer.periodic(
-      Duration(seconds: 30),
+      const Duration(seconds: 30),
       (_) {
         if (_prayerTimeModel != null) {
           final now = DateTime.now();
@@ -284,6 +298,38 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // MAHFUDZOT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  Future<void> loadDailyMahfudzot() async {
+    try {
+      _isLoadingMahfudzot = true;
+      notifyListeners();
+      
+      final String jsonString = await rootBundle.loadString('assets/json/mahfudzot.json');
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      final List<dynamic> mahfudzotList = jsonData['data'];
+      
+      // Ambil mahfudzot secara random setiap kali user buka aplikasi
+      final random = Random();
+      final index = random.nextInt(mahfudzotList.length);
+      
+      _dailyMahfudzot = mahfudzotList[index];
+      
+      _isLoadingMahfudzot = false;
+      notifyListeners();
+      
+      print('✅ Mahfudzot loaded (random #${index + 1}): ${_dailyMahfudzot?['latin']}');
+      
+    } catch (e) {
+      print('❌ Mahfudzot error: $e');
+      _isLoadingMahfudzot = false;
+      _dailyMahfudzot = null;
+      notifyListeners();
+    }
+  }
+
   bool _hasLastReadChanged(BookmarkModel? newData) {
     if (_lastRead == null && newData == null) return false;
     if (_lastRead == null || newData == null) return true;
@@ -324,6 +370,7 @@ class DashboardProvider extends ChangeNotifier {
         loadLocation(forceRefresh: true),
         loadPrayerTimes(forceRefresh: true),
         loadLastRead(silent: false),
+        loadDailyMahfudzot(),
       ]);
       
       print('✅ Refresh complete');
@@ -344,6 +391,7 @@ class DashboardProvider extends ChangeNotifier {
     await loadLocation(forceRefresh: true);
     await loadPrayerTimes(forceRefresh: true);
     await loadLastRead(silent: false);
+    await loadDailyMahfudzot();
     
     print('✅ Caches cleared');
   }

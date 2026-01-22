@@ -207,7 +207,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: TextStyle(
-              fontFamily: 'Utsmani',
+              fontFamily: 'Arabic',
               fontSize: arabicFontSize,
             
                   height: 1.85, // ✅ Line height lebih lega untuk readability

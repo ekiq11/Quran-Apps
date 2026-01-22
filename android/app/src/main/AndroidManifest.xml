@@ -1,66 +1,40 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.yourcompany.myquran">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-    <!-- 🔔 NOTIFICATION PERMISSIONS - FIXED v2.0 -->
+    <!-- ✅ NORMAL PERMISSIONS (Otomatis granted, tidak perlu request) -->
     <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
     
-    <!-- ⭐ CRITICAL FIX #1: Both SCHEDULE_EXACT_ALARM and USE_EXACT_ALARM -->
-    <!-- For Android 14+, BOTH permissions are required -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    
-    <!-- Android 13+ (API 33+) POST_NOTIFICATIONS -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- Full screen intent for popup notifications -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    
-    <!-- System alert window (overlay) -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    
-    <!-- Wake lock to show notification when screen is off -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
-    <!-- Vibration -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-    
-    <!-- Internet for prayer time API -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- ⚠️ DANGEROUS PERMISSIONS (Perlu request runtime) -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
     
-    <!-- Location for prayer times calculation -->
+    <!-- Location (untuk deteksi waktu sholat berdasarkan koordinat) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     
-    <!-- Background location (if needed for automatic prayer time updates) -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Notification (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- 🔐 SPECIAL PERMISSIONS (Otomatis granted di Android 12+) -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
     
-    <!-- Boot completed - to reschedule notifications after device restart -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    
-    <!-- Foreground service for background tasks -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    
-    <!-- Battery optimization -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    
-    <!-- Alarm manager -->
-    <uses-permission android:name="android.permission.SET_ALARM" />
+    <!-- Exact Alarm - Di Android 13+ otomatis granted untuk alarm apps -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:label="Bekal Muslim"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true"
-        android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true">
+        android:enableOnBackInvokedCallback="true">
         
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <!-- 🎯 MAIN ACTIVITY -->
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -69,11 +43,8 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true">
+            android:windowSoftInputMode="adjustResize">
             
-            <!-- Splash screen -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
@@ -83,24 +54,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             
-            <!-- Handle notification taps -->
             <intent-filter>
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <!-- 🔔 NOTIFICATION RECEIVERS - CRITICAL FIX #2 -->
-        <!-- ⭐ IMPORTANT: exported="false" for security -->
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        
-        <!-- Scheduled notification receiver -->
+        <!-- Notification Receivers -->
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         
-        <!-- Boot receiver - reschedule notifications after reboot -->
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
@@ -112,40 +76,25 @@
             </intent-filter>
         </receiver>
         
-        <!-- Action broadcast receiver for notification actions -->
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <!-- 📦 FLUTTER METADATA -->
-        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Flutter Metadata -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
             
     </application>
     
-    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-    <!-- 📱 QUERIES FOR APP INTERACTIONS -->
-    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-    
+    <!-- Queries -->
     <queries>
-        <!-- Browser -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
-        <!-- Settings -->
         <intent>
             <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
-        </intent>
-        <!-- Alarm settings (for exact alarm permission) -->
-        <intent>
-            <action android:name="android.settings.REQUEST_SCHEDULE_EXACT_ALARM" />
         </intent>
     </queries>
     

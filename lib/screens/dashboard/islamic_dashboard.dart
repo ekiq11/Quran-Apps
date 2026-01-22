@@ -4,10 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:myquran/provider/dashboard_provider.dart';
 import 'package:myquran/screens/util/constants.dart';
 import 'package:myquran/screens/widget/dashboard_header.dart';
-
 import 'package:provider/provider.dart';
-
-
 import '../../quran/screens/read_page.dart';
 
 class IslamicDashboardPage extends StatefulWidget {
@@ -17,42 +14,18 @@ class IslamicDashboardPage extends StatefulWidget {
   State<IslamicDashboardPage> createState() => _IslamicDashboardPageState();
 }
 
-class _IslamicDashboardPageState extends State<IslamicDashboardPage>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _animationController;
-  Animation<double>? _fadeAnimation;
-
+class _IslamicDashboardPageState extends State<IslamicDashboardPage> {
+  
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
     _initializeProvider();
-  }
-
-  void _initializeAnimations() {
-    _animationController = AnimationController(
-      vsync: this,
-      duration: AppAnimations.long,
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController!,
-      curve: AppAnimations.defaultCurve,
-    );
-
-    _animationController!.forward();
   }
 
   void _initializeProvider() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().initialize();
     });
-  }
-
-  @override
-  void dispose() {
-    _animationController?.dispose();
-    super.dispose();
   }
 
   Future<void> _handleRefresh() async {
@@ -97,29 +70,25 @@ class _IslamicDashboardPageState extends State<IslamicDashboardPage>
                 color: Colors.white,
                 backgroundColor: AppColors.primary,
                 strokeWidth: 3,
+                // ✅ FIX: Urutan physics yang benar
                 child: CustomScrollView(
-                  physics: AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
+                  physics: BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
+                  // ✅ OPTIMASI: Tambahkan cacheExtent untuk smooth scrolling
+                  cacheExtent: 500,
                   slivers: [
+                    // ✅ OPTIMASI: Wrap dengan RepaintBoundary
                     SliverToBoxAdapter(
-                      child: DashboardHeader(),
-                    ),
-                    SliverPadding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.paddingLarge,
+                      child: RepaintBoundary(
+                        child: DashboardHeader(),
                       ),
+                    ),
+                    // ✅ HAPUS FadeTransition - tidak perlu untuk konten kosong
+                    SliverPadding(
+                      padding: EdgeInsets.only(bottom: 20),
                       sliver: SliverToBoxAdapter(
-                        child: _fadeAnimation != null
-                            ? FadeTransition(
-                                opacity: _fadeAnimation!,
-                                child: Column(
-                                  children: [
-                                    
-                                  ],
-                                ),
-                              )
-                            : SizedBox.shrink(),
+                        child: SizedBox.shrink(),
                       ),
                     ),
                   ],
@@ -131,5 +100,4 @@ class _IslamicDashboardPageState extends State<IslamicDashboardPage>
       ),
     );
   }
-
 }

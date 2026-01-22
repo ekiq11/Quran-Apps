@@ -1,4 +1,4 @@
-// service/search_service.dart - FIXED FOR CORRECT FILE PATHS
+// service/search_service.dart - SMART SEARCH WITH FUZZY MATCHING
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -10,6 +10,7 @@ class SearchResult {
   final String arabicText;
   final String translation;
   final SearchResultType type;
+  final double relevanceScore;
 
   SearchResult({
     required this.surahNumber,
@@ -18,6 +19,7 @@ class SearchResult {
     required this.arabicText,
     required this.translation,
     this.type = SearchResultType.text,
+    this.relevanceScore = 0.0,
   });
 
   @override
@@ -37,125 +39,262 @@ enum SearchResultType {
   direct,
 }
 
+class SurahSuggestion {
+  final int number;
+  final String name;
+  final String arabicName;
+  final int ayatCount;
+  final double matchScore;
+
+  SurahSuggestion({
+    required this.number,
+    required this.name,
+    required this.arabicName,
+    required this.ayatCount,
+    required this.matchScore,
+  });
+}
+
+class _SurahData {
+  final int id;
+  final String name;
+  final List<String> arabicTexts;
+  final List<String> translations;
+
+  _SurahData({
+    required this.id,
+    required this.name,
+    required this.arabicTexts,
+    required this.translations,
+  });
+}
+
 class SearchService {
   final Map<int, _SurahData> _surahCache = {};
   static const int _maxResults = 100;
 
-  // Mapping nama surah
-  final Map<String, int> _surahNameMap = {
-    'al-fatihah': 1, 'alfatihah': 1, 'fatihah': 1, 'al fatihah': 1, 'fatiha': 1,
-    'al-baqarah': 2, 'albaqarah': 2, 'baqarah': 2, 'al baqarah': 2, 'baqoroh': 2,
-    'ali imran': 3, 'al-imran': 3, 'al imran': 3, 'imran': 3,
-    'an-nisa': 4, 'annisa': 4, 'nisa': 4, 'an nisa': 4,
-    'al-maidah': 5, 'almaidah': 5, 'maidah': 5, 'al maidah': 5,
-    'al-anam': 6, 'alanam': 6, 'anam': 6, 'al anam': 6,
-    'al-araf': 7, 'alaraf': 7, 'araf': 7, 'al araf': 7,
-    'al-anfal': 8, 'alanfal': 8, 'anfal': 8, 'al anfal': 8,
-    'at-taubah': 9, 'attaubah': 9, 'taubah': 9, 'at taubah': 9, 'tawbah': 9,
-    'yunus': 10, 'yusuf': 12, 'hud': 11,
-    'ar-rad': 13, 'arrad': 13, 'rad': 13,
-    'ibrahim': 14,
-    'al-hijr': 15, 'alhijr': 15, 'hijr': 15,
-    'an-nahl': 16, 'annahl': 16, 'nahl': 16,
-    'al-isra': 17, 'alisra': 17, 'isra': 17,
-    'al-kahf': 18, 'alkahf': 18, 'kahf': 18,
-    'maryam': 19, 'mariam': 19,
-    'taha': 20, 'ta-ha': 20, 'ta ha': 20,
-    'al-anbiya': 21, 'alanbiya': 21, 'anbiya': 21,
-    'al-hajj': 22, 'alhajj': 22, 'hajj': 22,
-    'al-muminun': 23, 'almuminun': 23, 'muminun': 23,
-    'an-nur': 24, 'annur': 24, 'nur': 24,
-    'al-furqan': 25, 'alfurqan': 25, 'furqan': 25,
-    'asy-syuara': 26, 'asysyuara': 26, 'syuara': 26,
-    'an-naml': 27, 'annaml': 27, 'naml': 27,
-    'al-qasas': 28, 'alqasas': 28, 'qasas': 28,
-    'al-ankabut': 29, 'alankabut': 29, 'ankabut': 29,
-    'ar-rum': 30, 'arrum': 30, 'rum': 30,
-    'luqman': 31, 'lukman': 31,
-    'as-sajdah': 32, 'assajdah': 32, 'sajdah': 32,
-    'al-ahzab': 33, 'alahzab': 33, 'ahzab': 33,
-    'saba': 34,
-    'fatir': 35, 'fathir': 35,
-    'yasin': 36, 'ya-sin': 36, 'ya sin': 36,
-    'as-saffat': 37, 'assaffat': 37, 'saffat': 37,
-    'sad': 38,
-    'az-zumar': 39, 'azzumar': 39, 'zumar': 39,
-    'ghafir': 40, 'gafir': 40,
-    'fussilat': 41,
-    'asy-syura': 42, 'asysyura': 42, 'syura': 42,
-    'az-zukhruf': 43, 'azzukhruf': 43, 'zukhruf': 43,
-    'ad-dukhan': 44, 'addukhan': 44, 'dukhan': 44,
-    'al-jasiyah': 45, 'aljasiyah': 45, 'jasiyah': 45,
-    'al-ahqaf': 46, 'alahqaf': 46, 'ahqaf': 46,
-    'muhammad': 47,
-    'al-fath': 48, 'alfath': 48, 'fath': 48,
-    'al-hujurat': 49, 'alhujurat': 49, 'hujurat': 49,
-    'qaf': 50,
-    'az-zariyat': 51, 'azzariyat': 51, 'zariyat': 51,
-    'at-tur': 52, 'attur': 52, 'tur': 52,
-    'an-najm': 53, 'annajm': 53, 'najm': 53,
-    'al-qamar': 54, 'alqamar': 54, 'qamar': 54,
-    'ar-rahman': 55, 'arrahman': 55, 'rahman': 55,
-    'al-waqiah': 56, 'alwaqiah': 56, 'waqiah': 56,
-    'al-hadid': 57, 'alhadid': 57, 'hadid': 57,
-    'al-mujadalah': 58, 'almujadalah': 58, 'mujadalah': 58,
-    'al-hasyr': 59, 'alhasyr': 59, 'hasyr': 59,
-    'al-mumtahanah': 60, 'almumtahanah': 60, 'mumtahanah': 60,
-    'as-saff': 61, 'assaff': 61, 'saff': 61,
-    'al-jumuah': 62, 'aljumuah': 62, 'jumuah': 62, 'jumat': 62,
-    'al-munafiqun': 63, 'almunafiqun': 63, 'munafiqun': 63,
-    'at-taghabun': 64, 'attaghabun': 64, 'taghabun': 64,
-    'at-talaq': 65, 'attalaq': 65, 'talaq': 65,
-    'at-tahrim': 66, 'attahrim': 66, 'tahrim': 66,
-    'al-mulk': 67, 'almulk': 67, 'mulk': 67,
-    'al-qalam': 68, 'alqalam': 68, 'qalam': 68, 'nun': 68,
-    'al-haqqah': 69, 'alhaqqah': 69, 'haqqah': 69,
-    'al-maarij': 70, 'almaarij': 70, 'maarij': 70,
-    'nuh': 71, 'nooh': 71,
-    'al-jinn': 72, 'aljinn': 72, 'jinn': 72, 'jin': 72,
-    'al-muzzammil': 73, 'almuzzammil': 73, 'muzzammil': 73,
-    'al-muddassir': 74, 'almuddassir': 74, 'muddassir': 74,
-    'al-qiyamah': 75, 'alqiyamah': 75, 'qiyamah': 75,
-    'al-insan': 76, 'alinsan': 76, 'insan': 76, 'dahr': 76,
-    'al-mursalat': 77, 'almursalat': 77, 'mursalat': 77,
-    'an-naba': 78, 'annaba': 78, 'naba': 78,
-    'an-naziat': 79, 'annaziat': 79, 'naziat': 79,
-    'abasa': 80,
-    'at-takwir': 81, 'attakwir': 81, 'takwir': 81,
-    'al-infitar': 82, 'alinfitar': 82, 'infitar': 82,
-    'al-mutaffifin': 83, 'almutaffifin': 83, 'mutaffifin': 83,
-    'al-insyiqaq': 84, 'alinsyiqaq': 84, 'insyiqaq': 84,
-    'al-buruj': 85, 'alburuj': 85, 'buruj': 85,
-    'at-tariq': 86, 'attariq': 86, 'tariq': 86,
-    'al-ala': 87, 'alala': 87, 'ala': 87,
-    'al-ghasyiyah': 88, 'alghasyiyah': 88, 'ghasyiyah': 88,
-    'al-fajr': 89, 'alfajr': 89, 'fajr': 89,
-    'al-balad': 90, 'albalad': 90, 'balad': 90,
-    'asy-syams': 91, 'asysyams': 91, 'syams': 91,
-    'al-lail': 92, 'allail': 92, 'lail': 92,
-    'ad-duha': 93, 'adduha': 93, 'duha': 93,
-    'asy-syarh': 94, 'asysyarh': 94, 'syarh': 94, 'insyirah': 94,
-    'at-tin': 95, 'attin': 95, 'tin': 95,
-    'al-alaq': 96, 'alalaq': 96, 'alaq': 96, 'iqra': 96,
-    'al-qadr': 97, 'alqadr': 97, 'qadr': 97,
-    'al-bayyinah': 98, 'albayyinah': 98, 'bayyinah': 98,
-    'az-zalzalah': 99, 'azzalzalah': 99, 'zalzalah': 99,
-    'al-adiyat': 100, 'aladiyat': 100, 'adiyat': 100,
-    'al-qariah': 101, 'alqariah': 101, 'qariah': 101,
-    'at-takasur': 102, 'attakasur': 102, 'takasur': 102,
-    'al-asr': 103, 'alasr': 103, 'asr': 103,
-    'al-humazah': 104, 'alhumazah': 104, 'humazah': 104,
-    'al-fil': 105, 'alfil': 105, 'fil': 105,
-    'quraisy': 106, 'quraysh': 106,
-    'al-maun': 107, 'almaun': 107, 'maun': 107,
-    'al-kausar': 108, 'alkausar': 108, 'kausar': 108, 'kautsar': 108,
-    'al-kafirun': 109, 'alkafirun': 109, 'kafirun': 109,
-    'an-nasr': 110, 'annasr': 110, 'nasr': 110,
-    'al-lahab': 111, 'allahab': 111, 'lahab': 111, 'masad': 111,
-    'al-ikhlas': 112, 'alikhlas': 112, 'ikhlas': 112, 'tauhid': 112,
-    'al-falaq': 113, 'alfalaq': 113, 'falaq': 113,
-    'an-nas': 114, 'annas': 114, 'nas': 114,
+  // Enhanced surah names with multiple variations
+  final Map<String, List<String>> _surahVariations = {
+    '1': ['fatihah', 'fatiha', 'alfatihah', 'al-fatihah', 'pembukaan'],
+    '2': ['baqarah', 'baqoroh', 'albaqarah', 'al-baqarah', 'sapi', 'lembu'],
+    '3': ['ali imran', 'imran', 'al-imran', 'keluarga imran'],
+    '4': ['nisa', 'annisa', 'an-nisa', 'wanita', 'perempuan'],
+    '5': ['maidah', 'almaidah', 'al-maidah', 'hidangan'],
+    '6': ['anam', 'alanam', 'al-anam', 'binatang ternak'],
+    '7': ['araf', 'alaraf', 'al-araf'],
+    '8': ['anfal', 'alanfal', 'al-anfal', 'harta rampasan'],
+    '9': ['taubah', 'tawbah', 'attaubah', 'at-taubah', 'pengampunan'],
+    '10': ['yunus', 'nabi yunus'],
+    '11': ['hud', 'nabi hud'],
+    '12': ['yusuf', 'yusup', 'nabi yusuf', 'nabi yusup'],
+    '13': ['rad', 'raad', 'arrad', 'ar-rad', 'guntur', 'guruh'],
+    '14': ['ibrahim', 'nabi ibrahim'],
+    '15': ['hijr', 'alhijr', 'al-hijr'],
+    '16': ['nahl', 'annahl', 'an-nahl', 'lebah'],
+    '17': ['isra', 'alisra', 'al-isra', 'perjalanan malam'],
+    '18': ['kahf', 'alkahf', 'al-kahf', 'gua'],
+    '19': ['maryam', 'mariam'],
+    '20': ['taha', 'ta-ha', 'ta ha'],
+    '21': ['anbiya', 'alanbiya', 'al-anbiya', 'para nabi'],
+    '22': ['hajj', 'alhajj', 'al-hajj', 'haji'],
+    '23': ['muminun', 'almuminun', 'al-muminun', 'orang-orang beriman'],
+    '24': ['nur', 'annur', 'an-nur', 'cahaya'],
+    '25': ['furqan', 'alfurqan', 'al-furqan', 'pembeda'],
+    '26': ['syuara', 'syu\'ara', 'asysyuara', 'asy-syuara', 'penyair'],
+    '27': ['naml', 'annaml', 'an-naml', 'semut'],
+    '28': ['qasas', 'qosos', 'alqasas', 'al-qasas', 'kisah'],
+    '29': ['ankabut', 'alankabut', 'al-ankabut', 'laba-laba'],
+    '30': ['rum', 'arrum', 'ar-rum', 'romawi'],
+    '31': ['luqman', 'lukman', 'loqman'],
+    '32': ['sajdah', 'sajdah', 'assajdah', 'as-sajdah', 'sujud'],
+    '33': ['ahzab', 'alahzab', 'al-ahzab', 'golongan'],
+    '34': ['saba', 'saba\''],
+    '35': ['fatir', 'fathir', 'pencipta'],
+    '36': ['yasin', 'ya-sin', 'ya sin', 'yasiin'],
+    '37': ['saffat', 'assaffat', 'as-saffat', 'barisan'],
+    '38': ['sad'],
+    '39': ['zumar', 'azzumar', 'az-zumar', 'rombongan'],
+    '40': ['ghafir', 'gafir', 'yang mengampuni'],
+    '41': ['fussilat', 'fushshilat', 'dijelaskan'],
+    '42': ['syura', 'asysyura', 'asy-syura', 'musyawarah'],
+    '43': ['zukhruf', 'azzukhruf', 'az-zukhruf', 'perhiasan'],
+    '44': ['dukhan', 'addukhan', 'ad-dukhan', 'kabut'],
+    '45': ['jasiyah', 'jatsiyah', 'aljasiyah', 'al-jasiyah', 'berlutut'],
+    '46': ['ahqaf', 'alahqaf', 'al-ahqaf', 'bukit pasir'],
+    '47': ['muhammad', 'nabi muhammad'],
+    '48': ['fath', 'fat-h', 'alfath', 'al-fath', 'kemenangan'],
+    '49': ['hujurat', 'hujuraat', 'alhujurat', 'al-hujurat', 'kamar'],
+    '50': ['qaf', 'qaaf'],
+    '51': ['zariyat', 'dzariyat', 'azzariyat', 'az-zariyat', 'angin'],
+    '52': ['tur', 'thur', 'attur', 'at-tur', 'bukit'],
+    '53': ['najm', 'annajm', 'an-najm', 'bintang'],
+    '54': ['qamar', 'qomar', 'alqamar', 'al-qamar', 'bulan'],
+    '55': ['rahman', 'arrahman', 'ar-rahman', 'maha pengasih'],
+    '56': ['waqiah', 'waqi\'ah', 'alwaqiah', 'al-waqiah', 'hari kiamat'],
+    '57': ['hadid', 'hadiid', 'alhadid', 'al-hadid', 'besi'],
+    '58': ['mujadalah', 'mujadilah', 'almujadalah', 'al-mujadalah', 'gugatan'],
+    '59': ['hasyr', 'hasyr', 'alhasyr', 'al-hasyr', 'pengusiran'],
+    '60': ['mumtahanah', 'mumtahanah', 'almumtahanah', 'al-mumtahanah', 'wanita diuji'],
+    '61': ['saff', 'shaf', 'assaff', 'as-saff', 'barisan'],
+    '62': ['jumuah', 'jum\'at', 'aljumuah', 'al-jumuah', 'jumat'],
+    '63': ['munafiqun', 'munafiqun', 'almunafiqun', 'al-munafiqun', 'orang munafik'],
+    '64': ['taghabun', 'taghaabun', 'attaghabun', 'at-taghabun', 'hari ditimbang'],
+    '65': ['talaq', 'thalaq', 'attalaq', 'at-talaq', 'cerai'],
+    '66': ['tahrim', 'tahriim', 'attahrim', 'at-tahrim', 'mengharamkan'],
+    '67': ['mulk', 'almulk', 'al-mulk', 'kerajaan'],
+    '68': ['qalam', 'alqalam', 'al-qalam', 'pena', 'nun'],
+    '69': ['haqqah', 'haaqqah', 'alhaqqah', 'al-haqqah', 'hari kiamat'],
+    '70': ['maarij', 'ma\'arij', 'almaarij', 'al-maarij', 'tempat naik'],
+    '71': ['nuh', 'nooh', 'nabi nuh'],
+    '72': ['jinn', 'jin', 'aljinn', 'al-jinn'],
+    '73': ['muzzammil', 'muzammil', 'almuzzammil', 'al-muzzammil', 'berselimut'],
+    '74': ['muddassir', 'mudatstsir', 'almuddassir', 'al-muddassir', 'berselimut'],
+    '75': ['qiyamah', 'qiyaamah', 'alqiyamah', 'al-qiyamah', 'hari berbangkit'],
+    '76': ['insan', 'alinsan', 'al-insan', 'manusia', 'dahr'],
+    '77': ['mursalat', 'mursalaat', 'almursalat', 'al-mursalat', 'malaikat'],
+    '78': ['naba', 'naba\'', 'annaba', 'an-naba', 'berita besar'],
+    '79': ['naziat', 'naazi\'at', 'annaziat', 'an-naziat', 'malaikat'],
+    '80': ['abasa', 'bermuka masam'],
+    '81': ['takwir', 'attakwir', 'at-takwir', 'menggulung'],
+    '82': ['infitar', 'alinfitar', 'al-infitar', 'terbelah'],
+    '83': ['mutaffifin', 'almutaffifin', 'al-mutaffifin', 'curang'],
+    '84': ['insyiqaq', 'insyiqaaq', 'alinsyiqaq', 'al-insyiqaq', 'terbelah'],
+    '85': ['buruj', 'buruuj', 'alburuj', 'al-buruj', 'gugusan bintang'],
+    '86': ['tariq', 'thariq', 'attariq', 'at-tariq', 'bintang'],
+    '87': ['ala', 'a\'la', 'alala', 'al-ala', 'maha tinggi'],
+    '88': ['ghasyiyah', 'ghaasyiyah', 'alghasyiyah', 'al-ghasyiyah', 'hari pembalasan'],
+    '89': ['fajr', 'fajar', 'alfajr', 'al-fajr', 'fajar'],
+    '90': ['balad', 'albalad', 'al-balad', 'negeri'],
+    '91': ['syams', 'shams', 'asysyams', 'asy-syams', 'matahari'],
+    '92': ['lail', 'layl', 'allail', 'al-lail', 'malam'],
+    '93': ['duha', 'dhuha', 'adduha', 'ad-duha', 'waktu duha'],
+    '94': ['syarh', 'syarah', 'asysyarh', 'asy-syarh', 'lapang', 'insyirah'],
+    '95': ['tin', 'tiin', 'attin', 'at-tin', 'buah tin'],
+    '96': ['alaq', 'alaq', 'alalaq', 'al-alaq', 'segumpal darah', 'iqra'],
+    '97': ['qadr', 'qodr', 'alqadr', 'al-qadr', 'kemuliaan'],
+    '98': ['bayyinah', 'bayyinah', 'albayyinah', 'al-bayyinah', 'bukti'],
+    '99': ['zalzalah', 'zalzalah', 'azzalzalah', 'az-zalzalah', 'goncangan'],
+    '100': ['adiyat', 'aadiyat', 'aladiyat', 'al-adiyat', 'kuda perang'],
+    '101': ['qariah', 'qaari\'ah', 'alqariah', 'al-qariah', 'hari kiamat'],
+    '102': ['takasur', 'takaatsur', 'attakasur', 'at-takasur', 'bermegah'],
+    '103': ['asr', 'ashar', 'alasr', 'al-asr', 'waktu'],
+    '104': ['humazah', 'humazah', 'alhumazah', 'al-humazah', 'pengumpat'],
+    '105': ['fil', 'fiil', 'alfil', 'al-fil', 'gajah'],
+    '106': ['quraisy', 'quraysh', 'qurays'],
+    '107': ['maun', 'maa\'un', 'almaun', 'al-maun', 'barang berguna'],
+    '108': ['kausar', 'kautsar', 'alkausar', 'al-kausar', 'nikmat'],
+    '109': ['kafirun', 'kafiroon', 'alkafirun', 'al-kafirun', 'orang kafir'],
+    '110': ['nasr', 'nashr', 'annasr', 'an-nasr', 'pertolongan'],
+    '111': ['lahab', 'masad', 'allahab', 'al-lahab', 'al-masad', 'api'],
+    '112': ['ikhlas', 'ikhlash', 'alikhlas', 'al-ikhlas', 'kemurnian', 'tauhid'],
+    '113': ['falaq', 'falaq', 'alfalaq', 'al-falaq', 'waktu subuh'],
+    '114': ['nas', 'naas', 'annas', 'an-nas', 'manusia'],
   };
+
+  final Map<int, String> _surahNames = {
+    1: 'Al-Fatihah', 2: 'Al-Baqarah', 3: 'Ali \'Imran', 4: 'An-Nisa',
+    5: 'Al-Ma\'idah', 6: 'Al-An\'am', 7: 'Al-A\'raf', 8: 'Al-Anfal',
+    9: 'At-Taubah', 10: 'Yunus', 11: 'Hud', 12: 'Yusuf',
+    13: 'Ar-Ra\'d', 14: 'Ibrahim', 15: 'Al-Hijr', 16: 'An-Nahl',
+    17: 'Al-Isra', 18: 'Al-Kahf', 19: 'Maryam', 20: 'Ta-Ha',
+    21: 'Al-Anbiya', 22: 'Al-Hajj', 23: 'Al-Mu\'minun', 24: 'An-Nur',
+    25: 'Al-Furqan', 26: 'Asy-Syu\'ara', 27: 'An-Naml', 28: 'Al-Qasas',
+    29: 'Al-\'Ankabut', 30: 'Ar-Rum', 31: 'Luqman', 32: 'As-Sajdah',
+    33: 'Al-Ahzab', 34: 'Saba\'', 35: 'Fatir', 36: 'Yasin',
+    37: 'As-Saffat', 38: 'Sad', 39: 'Az-Zumar', 40: 'Ghafir',
+    41: 'Fussilat', 42: 'Asy-Syura', 43: 'Az-Zukhruf', 44: 'Ad-Dukhan',
+    45: 'Al-Jasiyah', 46: 'Al-Ahqaf', 47: 'Muhammad', 48: 'Al-Fath',
+    49: 'Al-Hujurat', 50: 'Qaf', 51: 'Az-Zariyat', 52: 'At-Tur',
+    53: 'An-Najm', 54: 'Al-Qamar', 55: 'Ar-Rahman', 56: 'Al-Waqi\'ah',
+    57: 'Al-Hadid', 58: 'Al-Mujadalah', 59: 'Al-Hasyr', 60: 'Al-Mumtahanah',
+    61: 'As-Saff', 62: 'Al-Jumu\'ah', 63: 'Al-Munafiqun', 64: 'At-Taghabun',
+    65: 'At-Talaq', 66: 'At-Tahrim', 67: 'Al-Mulk', 68: 'Al-Qalam',
+    69: 'Al-Haqqah', 70: 'Al-Ma\'arij', 71: 'Nuh', 72: 'Al-Jinn',
+    73: 'Al-Muzzammil', 74: 'Al-Muddassir', 75: 'Al-Qiyamah', 76: 'Al-Insan',
+    77: 'Al-Mursalat', 78: 'An-Naba', 79: 'An-Nazi\'at', 80: '\'Abasa',
+    81: 'At-Takwir', 82: 'Al-Infitar', 83: 'Al-Mutaffifin', 84: 'Al-Insyiqaq',
+    85: 'Al-Buruj', 86: 'At-Tariq', 87: 'Al-A\'la', 88: 'Al-Ghasyiyah',
+    89: 'Al-Fajr', 90: 'Al-Balad', 91: 'Asy-Syams', 92: 'Al-Lail',
+    93: 'Ad-Duha', 94: 'Asy-Syarh', 95: 'At-Tin', 96: 'Al-\'Alaq',
+    97: 'Al-Qadr', 98: 'Al-Bayyinah', 99: 'Az-Zalzalah', 100: 'Al-\'Adiyat',
+    101: 'Al-Qari\'ah', 102: 'At-Takasur', 103: 'Al-\'Asr', 104: 'Al-Humazah',
+    105: 'Al-Fil', 106: 'Quraisy', 107: 'Al-Ma\'un', 108: 'Al-Kausar',
+    109: 'Al-Kafirun', 110: 'An-Nasr', 111: 'Al-Lahab', 112: 'Al-Ikhlas',
+    113: 'Al-Falaq', 114: 'An-Nas',
+  };
+
+  // Fuzzy matching dengan Levenshtein distance
+  int _levenshteinDistance(String s1, String s2) {
+    if (s1 == s2) return 0;
+    if (s1.isEmpty) return s2.length;
+    if (s2.isEmpty) return s1.length;
+
+    List<int> v0 = List<int>.generate(s2.length + 1, (i) => i);
+    List<int> v1 = List<int>.filled(s2.length + 1, 0);
+
+    for (int i = 0; i < s1.length; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < s2.length; j++) {
+        int cost = (s1[i] == s2[j]) ? 0 : 1;
+        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost].reduce((a, b) => a < b ? a : b);
+      }
+      List<int> temp = v0;
+      v0 = v1;
+      v1 = temp;
+    }
+    return v0[s2.length];
+  }
+
+  double _calculateSimilarity(String query, String target) {
+    query = query.toLowerCase();
+    target = target.toLowerCase();
+    
+    // Exact match
+    if (query == target) return 1.0;
+    
+    // Contains match
+    if (target.contains(query)) return 0.9;
+    if (query.contains(target)) return 0.85;
+    
+    // Fuzzy match
+    int distance = _levenshteinDistance(query, target);
+    int maxLen = query.length > target.length ? query.length : target.length;
+    
+    return 1.0 - (distance / maxLen);
+  }
+
+  List<SurahSuggestion> findSurahSuggestions(String query) {
+    if (query.trim().isEmpty) return [];
+    
+    List<SurahSuggestion> suggestions = [];
+    String queryLower = query.toLowerCase().trim();
+    
+    for (var entry in _surahVariations.entries) {
+      int surahNum = int.parse(entry.key);
+      List<String> variations = entry.value;
+      
+      double maxScore = 0.0;
+      for (String variation in variations) {
+        double score = _calculateSimilarity(queryLower, variation);
+        if (score > maxScore) maxScore = score;
+      }
+      
+      // Include if score > 0.5 (toleran terhadap typo)
+      if (maxScore > 0.5) {
+        suggestions.add(SurahSuggestion(
+          number: surahNum,
+          name: _surahNames[surahNum] ?? '',
+          arabicName: '', // Will be loaded if needed
+          ayatCount: 0, // Will be loaded if needed
+          matchScore: maxScore,
+        ));
+      }
+    }
+    
+    // Sort by score
+    suggestions.sort((a, b) => b.matchScore.compareTo(a.matchScore));
+    return suggestions.take(5).toList();
+  }
 
   Future<_SurahData> _loadSurahToCache(int surahNumber) async {
     if (_surahCache.containsKey(surahNumber)) {
@@ -163,19 +302,16 @@ class SearchService {
     }
 
     try {
-      // ✅ FIXED: Load ayat dengan format yang benar
       final ayahJson = await rootBundle.loadString(
         'assets/quran-json/ayat/arabic_verse_uthmani$surahNumber.json',
       );
       final ayahData = json.decode(ayahJson);
 
-      // Load translation
       final translationJson = await rootBundle.loadString(
         'assets/quran-json/terjemahan/$surahNumber.json',
       );
       final translationData = json.decode(translationJson);
 
-      // Load list surah untuk metadata
       final listSurahJson = await rootBundle.loadString(
         'assets/quran-json/surah/list-surah.json',
       );
@@ -223,22 +359,30 @@ class SearchService {
       };
     }
 
-    // Format: nama surah + nomor ayat
-    for (var entry in _surahNameMap.entries) {
-      final name = entry.key;
-      final surahNum = entry.value;
+    // Smart surah name + ayat (toleran typo)
+    final ayatPattern = RegExp(r'(\d+)$');
+    final ayatMatch = ayatPattern.firstMatch(trimmed);
+    
+    if (ayatMatch != null) {
+      String nameQuery = trimmed.replaceAll(ayatMatch.group(0)!, '').trim();
+      nameQuery = nameQuery.replaceAll(RegExp(r'\s+ayat\s*'), '').trim();
       
-      final pattern = RegExp('(?:^|\\s)$name(?:\\s+ayat)?\\s+(\\d+)(?:\\s|\$)');
-      final match = pattern.firstMatch(trimmed);
-      if (match != null) {
+      var suggestions = findSurahSuggestions(nameQuery);
+      if (suggestions.isNotEmpty && suggestions.first.matchScore > 0.7) {
         return {
-          'surah': surahNum,
-          'ayat': int.parse(match.group(1)!),
+          'surah': suggestions.first.number,
+          'ayat': int.parse(ayatMatch.group(1)!),
         };
       }
     }
 
     return null;
+  }
+
+  // Normalize Arabic text for better matching
+  String _normalizeArabic(String text) {
+    // Remove diacritical marks (tashkeel)
+    return text.replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '');
   }
 
   Future<List<SearchResult>> searchAll(String query) async {
@@ -267,6 +411,7 @@ class SearchService {
                     ? surah.translations[ayatNum - 1] 
                     : '',
                 type: SearchResultType.direct,
+                relevanceScore: 1.0,
               )
             ];
           }
@@ -280,7 +425,7 @@ class SearchService {
     // Text search
     if (trimmed.length < 3) return [];
 
-    final results = <SearchResult>{};
+    final results = <SearchResult>[];
     final queryLower = trimmed.toLowerCase();
     final normalizedQuery = _normalizeArabic(trimmed);
 
@@ -299,8 +444,14 @@ class SearchService {
               ? surah.translations[i] 
               : '';
           
-          if (normalizedText.contains(normalizedQuery) || 
-              translation.toLowerCase().contains(queryLower)) {
+          bool matchArabic = normalizedText.contains(normalizedQuery);
+          bool matchTranslation = translation.toLowerCase().contains(queryLower);
+          
+          if (matchArabic || matchTranslation) {
+            double score = 0.0;
+            if (matchArabic) score += 0.6;
+            if (matchTranslation) score += 0.4;
+            
             results.add(SearchResult(
               surahNumber: surah.id.toString(),
               surahName: surah.name,
@@ -308,6 +459,7 @@ class SearchService {
               arabicText: arabicText,
               translation: translation,
               type: SearchResultType.text,
+              relevanceScore: score,
             ));
           }
         }
@@ -317,14 +469,17 @@ class SearchService {
       }
     }
 
-    return results.toList();
+    // Sort by relevance
+    results.sort((a, b) => b.relevanceScore.compareTo(a.relevanceScore));
+    return results;
   }
 
   Future<List<SearchResult>> searchByArabicText(String query) async {
-    final results = <SearchResult>{};
-    final normalizedQuery = _normalizeArabic(query.trim());
-    
-    if (normalizedQuery.isEmpty || normalizedQuery.length < 3) return [];
+    final trimmed = query.trim();
+    if (trimmed.length < 3) return [];
+
+    final results = <SearchResult>[];
+    final normalizedQuery = _normalizeArabic(trimmed);
 
     for (int surahNumber = 1; surahNumber <= 114; surahNumber++) {
       if (results.length >= _maxResults) break;
@@ -347,6 +502,8 @@ class SearchService {
               translation: i < surah.translations.length 
                   ? surah.translations[i] 
                   : '',
+              type: SearchResultType.text,
+              relevanceScore: 0.9,
             ));
           }
         }
@@ -356,14 +513,15 @@ class SearchService {
       }
     }
 
-    return results.toList();
+    return results;
   }
 
   Future<List<SearchResult>> searchByTranslation(String query) async {
-    final results = <SearchResult>{};
-    final queryLower = query.trim().toLowerCase();
-    
-    if (queryLower.isEmpty || queryLower.length < 3) return [];
+    final trimmed = query.trim();
+    if (trimmed.length < 3) return [];
+
+    final results = <SearchResult>[];
+    final queryLower = trimmed.toLowerCase();
 
     for (int surahNumber = 1; surahNumber <= 114; surahNumber++) {
       if (results.length >= _maxResults) break;
@@ -374,9 +532,9 @@ class SearchService {
         for (int i = 0; i < surah.translations.length; i++) {
           if (results.length >= _maxResults) break;
           
-          final translation = surah.translations[i].toLowerCase();
+          final translation = surah.translations[i];
           
-          if (translation.contains(queryLower)) {
+          if (translation.toLowerCase().contains(queryLower)) {
             results.add(SearchResult(
               surahNumber: surah.id.toString(),
               surahName: surah.name,
@@ -384,7 +542,9 @@ class SearchService {
               arabicText: i < surah.arabicTexts.length 
                   ? surah.arabicTexts[i] 
                   : '',
-              translation: surah.translations[i],
+              translation: translation,
+              type: SearchResultType.text,
+              relevanceScore: 0.8,
             ));
           }
         }
@@ -394,38 +554,11 @@ class SearchService {
       }
     }
 
-    return results.toList();
+    return results;
   }
 
-  String _normalizeArabic(String text) {
-    return text
-        .replaceAll(RegExp(r'[\u064B-\u0652]'), '')
-        .replaceAll(RegExp(r'[\u0653-\u065F]'), '')
-        .replaceAll(RegExp(r'[\u0670]'), '')
-        .replaceAll('ٱ', 'ا')
-        .replaceAll('أ', 'ا')
-        .replaceAll('إ', 'ا')
-        .replaceAll('آ', 'ا')
-        .replaceAll('ى', 'ي')
-        .replaceAll('ة', 'ه')
-        .trim();
-  }
-
+  // Clear cache if needed
   void clearCache() {
     _surahCache.clear();
   }
-}
-
-class _SurahData {
-  final int id;
-  final String name;
-  final List<String> arabicTexts;
-  final List<String> translations;
-
-  _SurahData({
-    required this.id,
-    required this.name,
-    required this.arabicTexts,
-    required this.translations,
-  });
 }

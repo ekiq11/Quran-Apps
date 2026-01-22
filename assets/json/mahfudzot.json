@@ -1,0 +1,65 @@
+{
+  "status": "success",
+  "total": 50,
+  "data": [
+    { "id": 1, "arabic": "صَبَاحُ الْخَيْرِ", "latin": "Shabāḥul khair", "meaning": "Selamat pagi" },
+    { "id": 2, "arabic": "مَسَاءُ الْخَيْرِ", "latin": "Masā’ul khair", "meaning": "Selamat sore / malam" },
+    { "id": 3, "arabic": "أَهْلًا وَسَهْلًا", "latin": "Ahlan wa sahlan", "meaning": "Selamat datang" },
+    { "id": 4, "arabic": "كَيْفَ حَالُكَ؟", "latin": "Kaifa ḥāluka?", "meaning": "Apa kabar?" },
+    { "id": 5, "arabic": "جَزَاكَ اللّٰهُ خَيْرًا", "latin": "Jazākallāhu khairā", "meaning": "Semoga Allah membalasmu dengan kebaikan" },
+    { "id": 6, "arabic": "بَارَكَ اللّٰهُ فِيكَ", "latin": "Bārakallāhu fīk", "meaning": "Semoga Allah memberkahimu" },
+    { "id": 7, "arabic": "نَفَعَكَ اللّٰهُ بِالْعِلْمِ", "latin": "Nafa‘akallāhu bil ‘ilm", "meaning": "Semoga Allah memberimu manfaat dengan ilmu" },
+
+    { "id": 8, "arabic": "مَنْ جَدَّ وَجَدَ", "latin": "Man jadda wajada", "meaning": "Siapa yang bersungguh-sungguh akan berhasil" },
+    { "id": 9, "arabic": "مَنْ صَبَرَ ظَفِرَ", "latin": "Man ṣabara ẓafira", "meaning": "Siapa yang bersabar akan beruntung" },
+    { "id": 10, "arabic": "الْوَقْتُ كَالسَّيْفِ", "latin": "Al-waqtu kassayf", "meaning": "Waktu itu seperti pedang" },
+    { "id": 11, "arabic": "طَلَبُ الْعِلْمِ فَرِيضَةٌ", "latin": "Ṭalabul ‘ilmi farīḍah", "meaning": "Menuntut ilmu adalah kewajiban" },
+    { "id": 12, "arabic": "الْعِلْمُ نُورٌ", "latin": "Al-‘ilmu nūr", "meaning": "Ilmu adalah cahaya" },
+
+    { "id": 13, "arabic": "الصِّدْقُ يُنْجِي", "latin": "Ash-shidqu yunjī", "meaning": "Kejujuran menyelamatkan" },
+    { "id": 14, "arabic": "الصَّبْرُ مِفْتَاحُ الْفَرَجِ", "latin": "Ash-shabru miftāḥul faraj", "meaning": "Sabar adalah kunci kelapangan" },
+    { "id": 15, "arabic": "الْأَدَبُ فَوْقَ الْعِلْمِ", "latin": "Al-adabu fawqal ‘ilm", "meaning": "Adab lebih tinggi daripada ilmu" },
+
+    { "id": 16, "arabic": "خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ", "latin": "Khairunnāsi anfa‘uhum linnās", "meaning": "Sebaik-baik manusia adalah yang paling bermanfaat" },
+    { "id": 17, "arabic": "مَنْ تَوَاضَعَ رَفَعَهُ اللّٰهُ", "latin": "Man tawāḍa‘a rafa‘ahullāh", "meaning": "Siapa yang rendah hati akan diangkat derajatnya" },
+    { "id": 18, "arabic": "الْقَنَاعَةُ كَنْزٌ لَا يَفْنَى", "latin": "Al-qanā‘atu kanzun lā yafna", "meaning": "Qanaah adalah harta yang tak habis" },
+    { "id": 19, "arabic": "الْإِخْلَاصُ سِرُّ النَّجَاحِ", "latin": "Al-ikhlāṣu sirrun najāḥ", "meaning": "Keikhlasan adalah rahasia kesuksesan" },
+    { "id": 20, "arabic": "الْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ", "latin": "Al-kalimatut ṭayyibah ṣadaqah", "meaning": "Ucapan baik adalah sedekah" },
+
+    { "id": 21, "arabic": "اقْرَأِ الْقُرْآنَ فَإِنَّهُ نُورٌ لِلْقُلُوبِ", "latin": "Iqra’il Qur’āna fa innahu nūrun lil qulūb", "meaning": "Bacalah Al-Qur’an, karena ia adalah cahaya bagi hati" },
+    { "id": 22, "arabic": "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", "latin": "Khairukum man ta‘allamal Qur’āna wa ‘allamah", "meaning": "Sebaik-baik kalian adalah yang belajar Al-Qur’an dan mengajarkannya" },
+    { "id": 23, "arabic": "الْقُرْآنُ شِفَاءٌ لِمَا فِي الصُّدُورِ", "latin": "Al-Qur’ānu shifā’un limā fis ṣudūr", "meaning": "Al-Qur’an adalah penyembuh bagi hati" },
+    { "id": 24, "arabic": "بِالْقُرْآنِ تَطْمَئِنُّ الْقُلُوبُ", "latin": "Bil Qur’āni taṭma’innul qulūb", "meaning": "Dengan Al-Qur’an hati menjadi tenang" },
+    { "id": 25, "arabic": "اقْرَأْ وَارْتَقِ", "latin": "Iqra’ wartaक़i", "meaning": "Bacalah dan naiklah derajatmu" },
+
+    { "id": 26, "arabic": "الْقُرْآنُ رَبِيعُ الْقُلُوبِ", "latin": "Al-Qur’ānu rabī‘ul qulūb", "meaning": "Al-Qur’an adalah musim semi bagi hati" },
+    { "id": 27, "arabic": "لَا يَهْجُرُ الْقُرْآنَ إِلَّا قَلْبٌ قَاسٍ", "latin": "Lā yahjurul Qur’āna illā qalbun qās", "meaning": "Tidak meninggalkan Al-Qur’an kecuali hati yang keras" },
+    { "id": 28, "arabic": "تِلَاوَةُ الْقُرْآنِ حَيَاةُ الرُّوحِ", "latin": "Tilāwatul Qur’ān ḥayātur rūḥ", "meaning": "Membaca Al-Qur’an adalah kehidupan ruh" },
+    { "id": 29, "arabic": "الْقُرْآنُ دَلِيلُ الْمُؤْمِنِ", "latin": "Al-Qur’ānu dalīlul mu’min", "meaning": "Al-Qur’an adalah petunjuk orang beriman" },
+    { "id": 30, "arabic": "الْقُرْآنُ لَا يُمَلُّ", "latin": "Al-Qur’ānu lā yumall", "meaning": "Al-Qur’an tidak pernah membosankan" },
+
+    { "id": 31, "arabic": "الْعِلْمُ سُلَّمُ النَّجَاحِ", "latin": "Al-‘ilmu sullamun najāḥ", "meaning": "Ilmu adalah tangga kesuksesan" },
+    { "id": 32, "arabic": "الْعَمَلُ الصَّالِحُ نُورٌ", "latin": "Al-‘amalush ṣāliḥ nūr", "meaning": "Amal saleh adalah cahaya" },
+    { "id": 33, "arabic": "الْقَلْبُ السَّلِيمُ نِعْمَةٌ", "latin": "Al-qalbus salīm ni‘mah", "meaning": "Hati yang bersih adalah nikmat" },
+    { "id": 34, "arabic": "الْحَيَاءُ مِنَ الْإِيمَانِ", "latin": "Al-ḥayā’u minal īmān", "meaning": "Malu adalah bagian dari iman" },
+    { "id": 35, "arabic": "الْإِسْتِقَامَةُ خَيْرٌ مِنْ أَلْفِ كَرَامَةٍ", "latin": "Al-istiqāmah khairun min alfi karāmah", "meaning": "Istiqamah lebih baik dari seribu karomah" },
+
+    { "id": 36, "arabic": "احْفَظِ اللّٰهَ يَحْفَظْكَ", "latin": "Iḥfaẓillāha yaḥfaẓk", "meaning": "Jagalah Allah, niscaya Allah menjagamu" },
+    { "id": 37, "arabic": "الْقَنَاعَةُ رَاحَةٌ", "latin": "Al-qanā‘atu rāḥah", "meaning": "Qanaah adalah ketenangan" },
+    { "id": 38, "arabic": "الْخَيْرُ فِي الْوَسَطِ", "latin": "Al-khairu fil wasaṭ", "meaning": "Kebaikan ada di tengah-tengah" },
+    { "id": 39, "arabic": "الْعِلْمُ زَادُ الْمُسَافِرِ", "latin": "Al-‘ilmu zādul musāfir", "meaning": "Ilmu adalah bekal perjalanan" },
+    { "id": 40, "arabic": "الْحِكْمَةُ ضَالَّةُ الْمُؤْمِنِ", "latin": "Al-ḥikmatu ḍāllatul mu’min", "meaning": "Hikmah adalah barang hilang milik orang beriman" },
+
+    { "id": 41, "arabic": "الْعَاقِلُ مَنْ اتَّعَظَ بِغَيْرِهِ", "latin": "Al-‘āqilu man itt‘aẓa bighairih", "meaning": "Orang cerdas adalah yang mengambil pelajaran" },
+    { "id": 42, "arabic": "الْعَفْوُ عِنْدَ الْمَقْدِرَةِ", "latin": "Al-‘afwu ‘indal maqdrah", "meaning": "Memaafkan saat mampu membalas" },
+    { "id": 43, "arabic": "احْتَرِمْ تُحْتَرَمْ", "latin": "Iḥtaram tuḥtaram", "meaning": "Hormatilah, maka kamu akan dihormati" },
+    { "id": 44, "arabic": "الصَّدَاقَةُ أَمَانَةٌ", "latin": "Ash-shadāqatu amānah", "meaning": "Persahabatan adalah amanah" },
+    { "id": 45, "arabic": "الْجُودُ مِنْ شِيَمِ الْكِرَامِ", "latin": "Al-jūdu min shiyamil kirām", "meaning": "Dermawan adalah sifat orang mulia" },
+
+    { "id": 46, "arabic": "الْحِلْمُ زِينَةُ الْعِلْمِ", "latin": "Al-ḥilmu zīnatul ‘ilm", "meaning": "Kesabaran adalah perhiasan ilmu" },
+    { "id": 47, "arabic": "الْعَمَلُ بِدُونِ عِلْمٍ ضَلَالَةٌ", "latin": "Al-‘amalu bidūni ‘ilmin ḍalālah", "meaning": "Amal tanpa ilmu adalah kesesatan" },
+    { "id": 48, "arabic": "الْعِلْمُ بِدُونِ عَمَلٍ جُنُونٌ", "latin": "Al-‘ilmu bidūni ‘amalin junūn", "meaning": "Ilmu tanpa amal adalah kegilaan" },
+    { "id": 49, "arabic": "الْخَيْرُ فِي الصِّدْقِ", "latin": "Al-khairu fish-shidq", "meaning": "Kebaikan ada dalam kejujuran" },
+    { "id": 50, "arabic": "الْأَمَلُ حَيَاةٌ", "latin": "Al-amalu ḥayāh", "meaning": "Harapan adalah kehidupan" }
+  ]
+}

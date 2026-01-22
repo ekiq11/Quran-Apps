@@ -1,119 +1,135 @@
-// android/app/build.gradle - FIXED v2.0 WITH DESUGARING
+import java.util.Properties
+import java.io.FileInputStream
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
-        localProperties.load(reader)
-    }
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-def flutterRoot = localProperties.getProperty('flutter.sdk')
-if (flutterRoot == null) {
-    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
-}
 
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
+plugins {
+    id("com.android.application")
+    id("kotlin-android")
+    id("dev.flutter.flutter-gradle-plugin")
 }
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
-}
-
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    namespace "com.yourcompany.myquran" // ⭐ GANTI dengan package name Anda
-    
-    // ⭐ CRITICAL: SDK version untuk notification features
-    compileSdkVersion 34 // Minimal 33 untuk POST_NOTIFICATIONS
-    ndkVersion flutter.ndkVersion
+    namespace = "com.bekalsunnah.doa_harian"
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ⭐ CRITICAL FIX #3: DESUGARING ENABLED
-    // Required for Android 14+ scheduled notifications
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🔴 WAJIB: ikut plugin (SDK tertinggi)
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.bekalsunnah.doa_harian"
+
+        minSdk = flutter.minSdkVersion
+
+        // 🟢 AMAN: tahan dulu di 34
+        targetSdk = 35
+
+        versionCode = 33
+        versionName = "5.0"
+
+        multiDexEnabled = true
+
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
+    }
+
     compileOptions {
-        coreLibraryDesugaringEnabled true  // ⭐ CRITICAL!
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = "17"
     }
 
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
-    }
-
-    defaultConfig {
-        applicationId "com.yourcompany.myquran" // ⭐ GANTI dengan package name Anda
-        
-        // ⭐ CRITICAL: Min SDK 21 untuk notification features
-        minSdkVersion 21
-        
-        // ⭐ CRITICAL: Target SDK 34 untuk latest notification features
-        targetSdkVersion 34
-        
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        
-        // ⭐ MultiDex support (jika app besar)
-        multiDexEnabled true
+    signingConfigs {
+ 
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let { file(it as String) }
+            storePassword = keystoreProperties["storePassword"] as String?
+        }
     }
 
     buildTypes {
-        release {
-            // ⭐ Production settings
-            signingConfig signingConfigs.debug
-            minifyEnabled true
-            shrinkResources true
-            
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        getByName("release") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
-        
-        debug {
-            // ⭐ Debug settings
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-DEBUG"
+
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
-    
-    // ⭐ Lint options untuk menghindari error
-    lintOptions {
-        disable 'InvalidPackage'
-        checkReleaseBuilds false
+
+
+    packaging {
+        resources {
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "**/*.kotlin_module"
+            )
+        }
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("androidx.multidex:multidex:2.0.1")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.browser:browser:1.9.0")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    implementation("com.google.android.material:material:1.11.0")
+}
+
+// ⚠️ Jangan paksa versi lama
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core:1.13.1")
+        force("androidx.core:core-ktx:1.13.1")
     }
 }
 
 flutter {
-    source '../..'
-}
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    
-    // ⭐ AndroidX core libraries
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    
-    // ⭐ CRITICAL: WorkManager untuk background tasks
-    implementation 'androidx.work:work-runtime-ktx:2.9.0'
-    
-    // ⭐ MultiDex support
-    implementation 'androidx.multidex:multidex:2.0.1'
-    
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ⭐ CRITICAL FIX #3: DESUGARING + WINDOW DEPENDENCIES
-    // Required for Android 14+ compatibility
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
-    implementation 'androidx.window:window:1.0.0'
-    implementation 'androidx.window:window-java:1.0.0'
+    source = "../.."
 }

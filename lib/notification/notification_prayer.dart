@@ -1,15 +1,15 @@
-// notification/prayer_notification_handler.dart - WITH STOP BUTTON
+// notification/prayer_notification_handler.dart - COMPLETE WITH AUDIO
 import 'package:flutter/material.dart';
-
-
+import 'package:audioplayers/audioplayers.dart';
 
 class PrayerNotificationHandler {
   static final PrayerNotificationHandler _instance = PrayerNotificationHandler._internal();
   factory PrayerNotificationHandler() => _instance;
   PrayerNotificationHandler._internal();
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isPlaying = false;
 
-  
   /// Show full-screen adhan dialog with auto-play
   static Future<void> showAdhanDialog(
     BuildContext context, {
@@ -18,27 +18,27 @@ class PrayerNotificationHandler {
   }) async {
     final handler = PrayerNotificationHandler();
     
-    // Adzan sudah auto-play dari notifikasi
-    // Tidak perlu play lagi di sini
+    // ✅ Auto-play adzan when dialog opens
+    await handler._playAdzan();
     
     // Show full-screen dialog
     if (!context.mounted) return;
     
     await showDialog(
       context: context,
-      barrierDismissible: true, // ✅ Bisa dismiss dengan tap di luar
+      barrierDismissible: true,
       builder: (context) => WillPopScope(
         onWillPop: () async {
-          // ✅ Stop adhan when dialog dismissed (back button)
-
+          // ✅ Stop adzan when dialog dismissed (back button)
+          await handler.stopAdzan();
           return true;
         },
         child: _AdhanDialogContent(
           prayerName: prayerName,
           prayerTime: prayerTime,
           onClose: () async {
-            // ✅ Stop adhan when close button pressed
-     
+            // ✅ Stop adzan when close button pressed
+            await handler.stopAdzan();
             if (context.mounted) {
               Navigator.of(context).pop();
             }
@@ -47,8 +47,47 @@ class PrayerNotificationHandler {
       ),
     );
     
-    // ✅ IMPORTANT: Stop adzan after dialog closed (jika belum di-stop)
-  
+    // ✅ Ensure adzan stopped after dialog closed
+    await handler.stopAdzan();
+  }
+
+  /// Play adzan audio
+  Future<void> _playAdzan() async {
+    try {
+      print('🔊 Playing adzan...');
+      _isPlaying = true;
+      
+      await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.play(AssetSource('adzan/adzan.mp3'));
+      
+      print('✅ Adzan playing');
+    } catch (e) {
+      print('❌ Error playing adzan: $e');
+      _isPlaying = false;
+    }
+  }
+
+  /// Stop adzan audio
+  Future<void> stopAdzan() async {
+    if (!_isPlaying) return;
+    
+    try {
+      print('🔇 Stopping adzan...');
+      await _audioPlayer.stop();
+      _isPlaying = false;
+      print('✅ Adzan stopped');
+    } catch (e) {
+      print('❌ Error stopping adzan: $e');
+    }
+  }
+
+  /// Check if adzan is playing
+  bool get isPlaying => _isPlaying;
+
+  /// Dispose audio player
+  void dispose() {
+    _audioPlayer.dispose();
   }
 }
 
@@ -62,7 +101,6 @@ class _AdhanDialogContent extends StatefulWidget {
   const _AdhanDialogContent({
     required this.prayerName,
     required this.prayerTime,
-
     required this.onClose,
   });
 
@@ -96,7 +134,29 @@ class _AdhanDialogContentState extends State<_AdhanDialogContent>
     _controller.forward();
     
     // Listen to playback state
-  
+    _listenToAudioState();
+  }
+
+  void _listenToAudioState() {
+    final handler = PrayerNotificationHandler();
+    
+    // Update UI when audio finishes
+    handler._audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+    });
+
+    // Update UI when audio state changes
+    handler._audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+        });
+      }
+    });
   }
 
   @override
@@ -230,7 +290,6 @@ class _AdhanDialogContentState extends State<_AdhanDialogContent>
                           letterSpacing: 2,
                         ),
                       ),
-                      
                     ],
                   ),
                 ),
@@ -372,7 +431,7 @@ class _AdhanDialogContentState extends State<_AdhanDialogContent>
         );
       },
       onEnd: () {
-        // Repeat animation
+        // Repeat animation only if still playing
         Future.delayed(Duration(milliseconds: delay), () {
           if (mounted && _isPlaying) {
             setState(() {});

@@ -1,7 +1,11 @@
-// main.dart - PRODUCTION v4.0 FIXED - NO DUPLICATE PERMISSIONS
+// main.dart - FIXED v7.0 - AUTO POPUP NOTIFICATION
+// ✅ Popup muncul otomatis saat notifikasi trigger
+// ✅ Tidak perlu tap notifikasi
+// ✅ Seperti WhatsApp call notification
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myquran/notification/notification_manager.dart';
+import 'package:myquran/notification/notification_prayer.dart';
 import 'package:myquran/screens/widget/update_dialog.dart';
 import 'package:myquran/services/update.dart';
 import 'package:provider/provider.dart';
@@ -9,32 +13,28 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:myquran/provider/dashboard_provider.dart';
 import 'package:myquran/screens/dashboard/islamic_dashboard.dart';
 
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// 🚀 MAIN ENTRY POINT - FIXED v2.0
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ✅ GLOBAL KEY untuk navigate dari background
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
    
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print('🚀 STARTING BEKAL MUSLIM APP v4.0');
+  print('🚀 STARTING BEKAL MUSLIM APP v7.0');
+  print('   Features: Auto Popup Notifications');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  // 🔒 Lock orientation to portrait
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // ⏰ Initialize timezone FIRST (critical for notifications)
   print('⏰ Initializing timezone...');
   tz.initializeTimeZones();
   print('✅ Timezone initialized\n');
   
-  // 🔔 Initialize notification service
-  // ⭐ IMPORTANT: NotificationManager.initialize() handles ALL permissions
-  // No need for separate permission request here!
   await _initializeNotifications();
+  _setupNotificationHandlers();
   
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   print('✅ APP INITIALIZATION COMPLETE');
@@ -43,47 +43,310 @@ void main() async {
   runApp(const MyApp());
 }
 
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// 🔔 NOTIFICATION INITIALIZATION
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 Future<void> _initializeNotifications() async {
   try {
     print('🔔 Initializing Notification System...');
     
     final notificationManager = NotificationManager();
-    
-    // ⭐ initialize() already handles:
-    // - Permission requests
-    // - Channel creation
-    // - Plugin initialization
     final initialized = await notificationManager.initialize();
     
     if (initialized) {
       print('✅ Notification Manager Ready');
-      
-      // ⭐ REMOVED: No automatic test notification
-      // Test notification should only be triggered manually from settings
-      
     } else {
       print('⚠️ Notification Manager initialization failed');
-      print('   Some features may not work properly');
     }
     
     print('✅ Notification System Ready\n');
   } catch (e, stackTrace) {
     print('❌ Notification Init Failed: $e');
     print('Stack: $stackTrace');
-    
-    // ⭐ Don't crash app if notifications fail
-    // App should still be usable without notifications
-    print('⚠️ App will continue without notification support\n');
   }
 }
 
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// 🎨 APP WIDGET
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ✅ SETUP AUTO-POPUP HANDLERS
+void _setupNotificationHandlers() {
+  print('🔧 Setting up auto-popup handlers...');
+  
+  // ✅ NEW: Use context-aware callback for immediate popup
+  NotificationManager.onNotificationTappedWithContext = (context, type, data) {
+    print('📱 AUTO-POPUP TRIGGERED!');
+    print('   Type: $type');
+    print('   Context available: ${context != null}');
+    
+    // ✅ Show popup IMMEDIATELY when notification fires
+    _showPopupImmediately(context, type, data);
+  };
+  
+  print('✅ Auto-popup handlers configured');
+  print('   Prayer → Adhan Dialog');
+  print('   Dzikir → Dzikir Popup');
+  print('   Tilawah → Tilawah Popup');
+  print('   Doa → Doa Popup\n');
+}
+
+// ✅ SHOW POPUP IMMEDIATELY (No need to tap notification)
+void _showPopupImmediately(BuildContext context, String type, Map<String, dynamic> data) {
+  print('🎯 Showing popup for: $type');
+  
+  switch (type) {
+    case 'prayer':
+      _showPrayerPopup(context, data);
+      break;
+      
+    case 'dzikir':
+      _showDzikirPopup(context, data);
+      break;
+      
+    case 'tilawah':
+      _showTilawahPopup(context, data);
+      break;
+      
+    case 'doa':
+      _showDoaPopup(context, data);
+      break;
+      
+    default:
+      print('⚠️ Unknown notification type: $type');
+  }
+}
+
+// ✅ PRAYER POPUP - With Adzan Audio
+void _showPrayerPopup(BuildContext context, Map<String, dynamic> data) {
+  final prayerName = data['name'] as String? ?? 'Sholat';
+  final prayerTime = data['time'] as String? ?? '';
+  
+  print('🕌 Showing prayer popup for: $prayerName');
+  
+  PrayerNotificationHandler.showAdhanDialog(
+    context,
+    prayerName: prayerName,
+    prayerTime: prayerTime,
+  );
+}
+
+// ✅ DZIKIR POPUP - With Motivational Quote
+void _showDzikirPopup(BuildContext context, Map<String, dynamic> data) {
+  final dzikirType = data['name'] as String? ?? 'Pagi';
+  final title = data['title'] as String? ?? 'Waktu Dzikir';
+  final body = data['body'] as String? ?? 'Saatnya berdzikir';
+  
+  print('📿 Showing dzikir popup for: $dzikirType');
+  print('   Quote: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
+  
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) => _buildSimplePopup(
+      context: context,
+      icon: Icons.auto_stories_rounded,
+      color: Color(0xFF06B6D4),
+      title: title,
+      body: body,
+      actionText: 'Buka Dzikir',
+      onAction: () {
+        Navigator.pop(context);
+        // TODO: Navigate to dzikir page
+        print('→ Navigate to dzikir page');
+      },
+    ),
+  );
+}
+
+// ✅ TILAWAH POPUP - With Motivational Quote + Last Read Info
+void _showTilawahPopup(BuildContext context, Map<String, dynamic> data) {
+  final tilawahType = data['name'] as String? ?? 'Pagi';
+  final title = data['title'] as String? ?? 'Waktunya Tilawah';
+  final body = data['body'] as String? ?? 'Mari membaca Al-Qur\'an';
+  final motivationalQuote = data['motivationalQuote'] as String? ?? '';
+  final lastRead = data['lastRead'] as Map<String, dynamic>?;
+  
+  print('📖 Showing tilawah popup for: $tilawahType');
+  print('   Quote: ${motivationalQuote.substring(0, motivationalQuote.length > 50 ? 50 : motivationalQuote.length)}...');
+  
+  // ✅ Display motivational quote + last read info
+  String displayBody = body;
+  
+  // If we have separate motivational quote, prioritize it
+  if (motivationalQuote.isNotEmpty) {
+    displayBody = motivationalQuote;
+    
+    // Add last read info if available
+    if (lastRead != null) {
+      final surahName = lastRead['surahName'] as String? ?? '';
+      final ayahNumber = lastRead['ayahNumber'] as int? ?? 0;
+      if (surahName.isNotEmpty) {
+        displayBody += '\n\n📍 Lanjutkan: $surahName Ayat $ayahNumber';
+      }
+    }
+  }
+  
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) => _buildSimplePopup(
+      context: context,
+      icon: Icons.menu_book_rounded,
+      color: Color(0xFF10B981),
+      title: title,
+      body: displayBody,
+      actionText: 'Buka Al-Qur\'an',
+      onAction: () {
+        Navigator.pop(context);
+        // TODO: Navigate to Quran page
+        print('→ Navigate to Quran page');
+      },
+    ),
+  );
+}
+
+// ✅ DOA POPUP - With Motivational Quote
+void _showDoaPopup(BuildContext context, Map<String, dynamic> data) {
+  final doaType = data['name'] as String? ?? 'Pagi';
+  final title = data['title'] as String? ?? 'Waktu Berdoa';
+  final body = data['body'] as String? ?? 'Mari berdoa kepada Allah';
+  
+  print('🤲 Showing doa popup for: $doaType');
+  print('   Quote: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
+  
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) => _buildSimplePopup(
+      context: context,
+      icon: Icons.volunteer_activism_rounded,
+      color: Color(0xFFA855F7),
+      title: title,
+      body: body,
+      actionText: 'Aamiin',
+      onAction: () {
+        Navigator.pop(context);
+        print('→ Doa popup dismissed with Aamiin');
+      },
+    ),
+  );
+}
+
+// ✅ SIMPLE POPUP WIDGET (Reusable)
+Widget _buildSimplePopup({
+  required BuildContext context,
+  required IconData icon,
+  required Color color,
+  required String title,
+  required String body,
+  required String actionText,
+  required VoidCallback onAction,
+}) {
+  return Dialog(
+    backgroundColor: Colors.transparent,
+    child: Container(
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 30,
+            spreadRadius: 5,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 64, color: Colors.white),
+          ),
+          SizedBox(height: 24),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              body,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: Colors.white, width: 2),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Nanti',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: onAction,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: color,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    actionText,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -92,11 +355,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => DashboardProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey, // ✅ CRITICAL: Global navigator key
         title: 'Bekal Muslim',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -128,10 +390,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// 🚀 APP INITIALIZER WITH SPLASH SCREEN
-/// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 class AppInitializer extends StatefulWidget {
   const AppInitializer({Key? key}) : super(key: key);
 
@@ -152,14 +410,10 @@ class _AppInitializerState extends State<AppInitializer> {
 
   Future<void> _initializeApp() async {
     try {
-      // Show splash for minimum duration
       await Future.delayed(const Duration(milliseconds: 1000));
       
-      // Check for updates
       if (mounted) {
-        setState(() {
-          _statusMessage = 'Memeriksa pembaruan...';
-        });
+        setState(() => _statusMessage = 'Memeriksa pembaruan...');
       }
       
       await _checkForUpdates();
@@ -168,9 +422,7 @@ class _AppInitializerState extends State<AppInitializer> {
       print('⚠️ Initialization error: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isCheckingUpdate = false;
-        });
+        setState(() => _isCheckingUpdate = false);
       }
     }
   }
@@ -180,9 +432,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final updateInfo = await _updateService.checkForUpdate();
       
       if (updateInfo != null && mounted) {
-        setState(() {
-          _statusMessage = 'Pembaruan tersedia...';
-        });
+        setState(() => _statusMessage = 'Pembaruan tersedia...');
         
         await showDialog(
           context: context,
@@ -219,7 +469,6 @@ class _AppInitializerState extends State<AppInitializer> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App Icon
                 Container(
                   width: 120,
                   height: 120,
@@ -247,10 +496,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     },
                   ),
                 ),
-                
                 const SizedBox(height: 32),
-                
-                // App Name
                 const Text(
                   'Bekal Muslim',
                   style: TextStyle(
@@ -260,10 +506,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     letterSpacing: 1,
                   ),
                 ),
-                
                 const SizedBox(height: 8),
-                
-                // Tagline
                 const Text(
                   'Aplikasi Islami Lengkap',
                   style: TextStyle(
@@ -272,10 +515,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     letterSpacing: 0.5,
                   ),
                 ),
-                
                 const SizedBox(height: 48),
-                
-                // Loading Indicator
                 const SizedBox(
                   width: 40,
                   height: 40,
@@ -284,10 +524,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     strokeWidth: 3,
                   ),
                 ),
-                
                 const SizedBox(height: 24),
-                
-                // Status Message
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Text(
@@ -300,16 +537,10 @@ class _AppInitializerState extends State<AppInitializer> {
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 8),
-                
-                // Version
                 const Text(
-                  'v4.0.0',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                  ),
+                  'v7.0.0 - Auto Popup',
+                  style: TextStyle(fontSize: 12, color: Colors.white),
                 ),
               ],
             ),

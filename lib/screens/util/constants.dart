@@ -27,7 +27,7 @@ class AppColors {
   static const List<Color> primaryGradient = [primary, primaryDark];
   static const List<Color> secondaryGradient = [secondary, secondaryDark];
   static const List<Color> purpleGradient = [purple, purpleDark];
-  static const List<Color> headerGradient = [primaryLight, Color.fromARGB(255, 115, 115, 115)];
+  static const List<Color> headerGradient = [Color.fromARGB(255, 87, 87, 87),Color.fromARGB(218, 49, 49, 49)];
 }
 
 class AppTextStyles {

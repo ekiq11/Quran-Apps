@@ -264,7 +264,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
                 textAlign: TextAlign.justify,
                 textDirection: TextDirection.rtl,
                 style: TextStyle(
-              fontFamily: 'Utsmani',
+              fontFamily: 'Arabic',
               fontSize: arabicFontSize,
               height: 1.85, // ✅ Line height lebih lega untuk readability
                   color: Color(0xFF1F2937),

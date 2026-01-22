@@ -1,10 +1,107 @@
-// screens/notification/notification_center_page.dart - MIGRATED TO NotificationManager
+// screens/notification/notification_center_page.dart - MODERN UI
+// ✅ Properly handle scheduled vs shown notifications
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:myquran/notification/notification_manager.dart'; // ✅ CHANGED
+import 'package:myquran/notification/notification_manager.dart';
+import 'package:myquran/notification/notification_service.dart';
 import 'package:myquran/screens/util/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
+// ✅ PINDAHKAN ENUM KE TOP-LEVEL (di luar class)
+enum NotificationType {
+  subuh, dzuhur, ashar, maghrib, isya,
+  prayer, dzikir, quran, doa, system;
+
+  IconData get icon {
+    switch (this) {
+      case NotificationType.subuh: return Icons.wb_twilight;
+      case NotificationType.dzuhur: return Icons.wb_sunny;
+      case NotificationType.ashar: return Icons.wb_sunny_outlined;
+      case NotificationType.maghrib: return Icons.nights_stay;
+      case NotificationType.isya: return Icons.bedtime;
+      case NotificationType.prayer: return Icons.mosque_rounded;
+      case NotificationType.dzikir: return Icons.auto_stories_rounded;
+      case NotificationType.quran: return Icons.menu_book_rounded;
+      case NotificationType.doa: return Icons.volunteer_activism_rounded;
+      case NotificationType.system: return Icons.info_rounded;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case NotificationType.subuh: return Color(0xFF8B5CF6);
+      case NotificationType.dzuhur: return Color(0xFFF59E0B);
+      case NotificationType.ashar: return Color(0xFFEF4444);
+      case NotificationType.maghrib: return Color(0xFFEC4899);
+      case NotificationType.isya: return Color(0xFF3B82F6);
+      case NotificationType.prayer: return Color(0xFF059669);
+      case NotificationType.dzikir: return Color(0xFF06B6D4);
+      case NotificationType.quran: return Color(0xFF10B981);
+      case NotificationType.doa: return Color(0xFFA855F7);
+      case NotificationType.system: return Color(0xFF6B7280);
+    }
+  }
+}
+
+// ✅ PINDAHKAN CLASS NOTIFICATIONITEM KE TOP-LEVEL (di luar class)
+class NotificationItem {
+  final String id;
+  final String title;
+  final String body;
+  final NotificationType type;
+  final DateTime timestamp;
+  final bool isRead;
+  final bool isScheduled;
+
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.timestamp,
+    this.isRead = false,
+    this.isScheduled = false,
+  });
+
+  NotificationItem copyWith({
+    String? id, String? title, String? body,
+    NotificationType? type, DateTime? timestamp,
+    bool? isRead, bool? isScheduled,
+  }) {
+    return NotificationItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      type: type ?? this.type,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+      isScheduled: isScheduled ?? this.isScheduled,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'body': body,
+    'type': type.index,
+    'timestamp': timestamp.millisecondsSinceEpoch,
+    'isRead': isRead,
+    'isScheduled': isScheduled,
+  };
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      body: json['body'] as String,
+      type: NotificationType.values[json['type'] as int],
+      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int),
+      isRead: json['isRead'] as bool? ?? false,
+      isScheduled: json['isScheduled'] as bool? ?? false,
+    );
+  }
+}
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({Key? key}) : super(key: key);
@@ -15,7 +112,7 @@ class NotificationCenterPage extends StatefulWidget {
 
 class _NotificationCenterPageState extends State<NotificationCenterPage> 
     with TickerProviderStateMixin {
-  final NotificationManager _notificationManager = NotificationManager(); // ✅ CHANGED
+  final NotificationManager _notificationManager = NotificationManager();
   
   List<NotificationItem> _allNotifications = [];
   bool _isLoading = true;
@@ -24,7 +121,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
 
   static const String _keyNotificationHistory = 'notification_history_v3';
   static const String _keyReadNotifications = 'read_notifications_v2';
-  static const String _keyBadgeCount = 'notification_badge_count'; // ✅ ADDED
+  static const String _keyBadgeCount = 'notification_badge_count';
 
   @override
   void initState() {
@@ -64,6 +161,20 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
     return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
+  // ✅ TAMBAHKAN fungsi untuk format waktu singkat
+  String _getShortTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inSeconds < 60) return 'Baru saja';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m';
+    if (difference.inHours < 24) return '${difference.inHours}j';
+    if (difference.inDays == 1) return 'Kemarin';
+    if (difference.inDays < 7) return '${difference.inDays}h';
+    
+    return '${dateTime.day}/${dateTime.month}';
+  }
+
   Future<void> _loadNotifications() async {
     setState(() => _isLoading = true);
     
@@ -93,7 +204,18 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
         }
       }
       
-      _allNotifications.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      _allNotifications.sort((a, b) {
+        if (a.isScheduled && !b.isScheduled) return -1;
+        if (!a.isScheduled && b.isScheduled) return 1;
+        if (!a.isRead && b.isRead) return -1;
+        if (a.isRead && !b.isRead) return 1;
+        return b.timestamp.compareTo(a.timestamp);
+      });
+      
+      print('📱 Loaded ${_allNotifications.length} notifications');
+      print('📊 Scheduled: ${_allNotifications.where((n) => n.isScheduled).length}');
+      print('📊 Unread: ${_allNotifications.where((n) => !n.isRead && !n.isScheduled).length}');
+      
     } catch (e) {
       print('Error loading notifications: $e');
     }
@@ -102,7 +224,6 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
     _fadeController.forward();
   }
 
-  // ✅ UPDATED: Manual badge count update (NotificationManager handles this internally)
   Future<void> _updateBadgeCount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -111,6 +232,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
       
       if (historyJson == null) {
         await prefs.setInt(_keyBadgeCount, 0);
+        NotificationService.badgeCount.value = 0;
         return;
       }
       
@@ -124,12 +246,15 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
       
       int unreadCount = 0;
       for (var item in history) {
-        if (!readIds.contains(item['id'].toString())) {
+        final isScheduled = item['isScheduled'] as bool? ?? false;
+        if (!isScheduled && !readIds.contains(item['id'].toString())) {
           unreadCount++;
         }
       }
       
       await prefs.setInt(_keyBadgeCount, unreadCount);
+      NotificationService.badgeCount.value = unreadCount;
+      print('🔢 Badge updated: $unreadCount');
     } catch (e) {
       print('⚠️ Error updating badge: $e');
     }
@@ -147,8 +272,8 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
       final readIdsJson = jsonEncode(readIds);
       await prefs.setString(_keyReadNotifications, readIdsJson);
       
-      // ✅ UPDATED: Use manual badge update instead of NotificationService method
       await _updateBadgeCount();
+      NotificationService().updateBadgeCountManual();
       
     } catch (e) {
       print('Error saving notification history: $e');
@@ -303,7 +428,6 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
             fontSize: _getHeadingFontSize(context),
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            letterSpacing: -0.5,
           ),
         ),
         centerTitle: false,
@@ -323,8 +447,8 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
           if (_allNotifications.isNotEmpty)
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 24),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
               offset: Offset(0, 50),
               onSelected: (value) {
                 if (value == 'mark_all') _markAllAsRead();
@@ -335,25 +459,26 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                 PopupMenuItem(
                   value: 'refresh',
                   child: Row(children: [
-                    Icon(Icons.refresh_rounded, color: AppColors.primary, size: 22),
-                    SizedBox(width: 14),
-                    Text('Muat Ulang', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500))
+                    Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+                    SizedBox(width: 12),
+                    Text('Muat Ulang', style: TextStyle(fontSize: 14))
                   ]),
                 ),
-                PopupMenuItem(
-                  value: 'mark_all',
-                  child: Row(children: [
-                    Icon(Icons.done_all_rounded, color: Color(0xFF059669), size: 22),
-                    SizedBox(width: 14),
-                    Text('Tandai Semua Dibaca', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500))
-                  ]),
-                ),
+                if (unreadCount > 0)
+                  PopupMenuItem(
+                    value: 'mark_all',
+                    child: Row(children: [
+                      Icon(Icons.done_all_rounded, color: Color(0xFF10B981), size: 20),
+                      SizedBox(width: 12),
+                      Text('Tandai Semua Dibaca', style: TextStyle(fontSize: 14))
+                    ]),
+                  ),
                 PopupMenuItem(
                   value: 'clear_all',
                   child: Row(children: [
-                    Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444), size: 22),
-                    SizedBox(width: 14),
-                    Text('Hapus Semua', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500))
+                    Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444), size: 20),
+                    SizedBox(width: 12),
+                    Text('Hapus Semua', style: TextStyle(fontSize: 14))
                   ]),
                 ),
               ],
@@ -375,9 +500,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                         onRefresh: _loadNotifications,
                         color: AppColors.primary,
                         child: ListView.separated(
-                          padding: EdgeInsets.all(_getPadding(context)),
+                          padding: EdgeInsets.zero, // ✅ Hapus padding
                           itemCount: _allNotifications.length,
-                          separatorBuilder: (_, __) => SizedBox(height: 12),
+                          separatorBuilder: (_, __) => SizedBox.shrink(), // ✅ No separator
                           itemBuilder: (context, index) => _buildNotificationCard(_allNotifications[index]),
                         ),
                       ),
@@ -390,59 +515,52 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
 
   Widget _buildUnreadBanner(int count) {
     return Container(
-      margin: EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(
+        horizontal: _getPadding(context),
+        vertical: 12,
+      ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.15), AppColors.primary.withOpacity(0.05)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+        color: AppColors.primary.withOpacity(0.05),
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.primary.withOpacity(0.15),
+            width: 1,
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
       ),
       child: Row(
         children: [
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
+          Icon(
+            Icons.notifications_active_rounded,
+            color: AppColors.primary,
+            size: _getIconSize(context) - 2,
           ),
-          SizedBox(width: 14),
+          SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$count Notifikasi Baru',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
-                ),
-                Text(
-                  'Anda memiliki $count notifikasi yang belum dibaca',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                ),
-              ],
+            child: Text(
+              '$count notifikasi belum dibaca',
+              style: TextStyle(
+                fontSize: _getContentFontSize(context),
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
             ),
           ),
           TextButton(
             onPressed: _markAllAsRead,
             style: TextButton.styleFrom(
               foregroundColor: AppColors.primary,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              backgroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text('Tandai', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Tandai semua',
+              style: TextStyle(
+                fontSize: _getContentFontSize(context) - 1,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -485,261 +603,201 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
     );
   }
 
-  Widget _buildNotificationCard(NotificationItem notification) {
-    return Dismissible(
-      key: Key(notification.id),
-      background: _buildSwipeBackground(true),
-      secondaryBackground: _buildSwipeBackground(false),
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          _markAsRead(notification.id);
-          return false;
-        }
-        return true;
-      },
-      onDismissed: (_) => _deleteNotification(notification.id),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: notification.isRead ? Color(0xFFE5E7EB) : notification.type.color.withOpacity(0.3),
-            width: notification.isRead ? 1 : 2,
+ Widget _buildNotificationCard(NotificationItem notification) {
+  final isScheduled = notification.isScheduled;
+  
+  return Dismissible(
+    key: Key(notification.id),
+    background: _buildSwipeBackground(true),
+    secondaryBackground: _buildSwipeBackground(false),
+    confirmDismiss: (direction) async {
+      if (direction == DismissDirection.startToEnd) {
+        if (!isScheduled) _markAsRead(notification.id);
+        return false;
+      }
+      return true;
+    },
+    onDismissed: (_) => _deleteNotification(notification.id),
+    child: Container(
+      decoration: BoxDecoration(
+        // ✅ Background berbeda untuk yang belum dibaca
+        color: !notification.isRead && !isScheduled
+            ? notification.type.color.withOpacity(0.04)
+            : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE5E7EB),
+            width: 0.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: notification.isRead 
-                ? Colors.black.withOpacity(0.04)
-                : notification.type.color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              if (!notification.isRead) _markAsRead(notification.id);
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [notification.type.color, notification.type.color.withOpacity(0.8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: notification.type.color.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            if (!notification.isRead && !isScheduled) {
+              _markAsRead(notification.id);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: _getPadding(context),
+              vertical: 14,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: _getIconSize(context) * 1.8,
+                  height: _getIconSize(context) * 1.8,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isScheduled
+                          ? [Color(0xFF3B82F6), Color(0xFF2563EB)]
+                          : !notification.isRead
+                              ? [notification.type.color, notification.type.color.withOpacity(0.85)]
+                              : [Color(0xFF9CA3AF), Color(0xFF6B7280)], // ✅ Abu-abu untuk yang sudah dibaca
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: Icon(notification.type.icon, color: Colors.white, size: 24),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notification.title,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.bold,
-                                  color: Color(0xFF111827),
-                                  height: 1.3,
-                                ),
+                  child: Icon(
+                    isScheduled ? Icons.schedule_rounded : notification.type.icon,
+                    color: Colors.white,
+                    size: _getIconSize(context),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification.title,
+                              style: TextStyle(
+                                fontSize: _getTitleFontSize(context),
+                                // ✅ Font weight lebih jelas perbedaannya
+                                fontWeight: notification.isRead 
+                                    ? FontWeight.w400  // ✅ Lebih tipis untuk yang sudah dibaca
+                                    : FontWeight.w700, // ✅ Bold untuk yang belum dibaca
+                                // ✅ Warna lebih kontras
+                                color: notification.isRead 
+                                    ? Color(0xFF6B7280) // ✅ Abu-abu untuk yang sudah dibaca
+                                    : Color(0xFF111827), // ✅ Hitam untuk yang belum dibaca
+                                height: 1.2,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            if (!notification.isRead)
-                              Container(
-                                width: 10,
-                                height: 10,
-                                margin: EdgeInsets.only(left: 8),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [notification.type.color, notification.type.color.withOpacity(0.8)],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: notification.type.color.withOpacity(0.5),
-                                      blurRadius: 6,
-                                      spreadRadius: 1,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          notification.body,
-                          style: TextStyle(fontSize: 13, color: Color(0xFF6B7280), height: 1.5),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF9CA3AF)),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            _getShortTimeAgo(notification.timestamp),
+                            style: TextStyle(
+                              fontSize: _getContentFontSize(context) - 1.5,
+                              color: Color(0xFF9CA3AF),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          if (!notification.isRead && !isScheduled) ...[
                             SizedBox(width: 6),
-                            Text(
-                              _getTimeAgo(notification.timestamp),
-                              style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w500),
+                            Container(
+                              width: 8, // ✅ Sedikit lebih besar
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: notification.type.color,
+                                shape: BoxShape.circle,
+                                boxShadow: [ // ✅ Tambah shadow agar lebih terlihat
+                                  BoxShadow(
+                                    color: notification.type.color.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
+                        ],
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        notification.body,
+                        style: TextStyle(
+                          fontSize: _getContentFontSize(context),
+                          // ✅ Warna lebih kontras
+                          color: notification.isRead 
+                              ? Color(0xFF9CA3AF) // ✅ Abu-abu terang untuk yang sudah dibaca
+                              : Color(0xFF374151), // ✅ Lebih gelap untuk yang belum dibaca
+                          height: 1.35,
+                          fontWeight: notification.isRead 
+                              ? FontWeight.w400
+                              : FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (isScheduled) ...[
+                        SizedBox(height: 6),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF3B82F6).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: Color(0xFF3B82F6).withOpacity(0.2),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: 11,
+                                color: Color(0xFF3B82F6),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Terjadwal',
+                                style: TextStyle(
+                                  fontSize: _getContentFontSize(context) - 2,
+                                  color: Color(0xFF3B82F6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSwipeBackground(bool isLeft) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isLeft 
-            ? [Color(0xFF059669), Color(0xFF047857)]
-            : [Color(0xFFEF4444), Color(0xFFDC2626)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: isLeft ? Color(0xFF10B981) : Color(0xFFEF4444),
       ),
       alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
       padding: EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isLeft ? Icons.done_rounded : Icons.delete_outline_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-          SizedBox(height: 4),
-          Text(
-            isLeft ? 'Tandai Dibaca' : 'Hapus',
-            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        ],
+      child: Icon(
+        isLeft ? Icons.check_rounded : Icons.delete_outline_rounded,
+        color: Colors.white,
+        size: _getIconSize(context),
       ),
-    );
-  }
-}
-
-enum NotificationType {
-  subuh, dzuhur, ashar, maghrib, isya,
-  prayer, dzikir, quran, doa, system;
-
-  IconData get icon {
-    switch (this) {
-      case NotificationType.subuh: return Icons.wb_twilight;
-      case NotificationType.dzuhur: return Icons.wb_sunny;
-      case NotificationType.ashar: return Icons.wb_sunny_outlined;
-      case NotificationType.maghrib: return Icons.nights_stay;
-      case NotificationType.isya: return Icons.bedtime;
-      case NotificationType.prayer: return Icons.mosque_rounded;
-      case NotificationType.dzikir: return Icons.auto_stories_rounded;
-      case NotificationType.quran: return Icons.menu_book_rounded;
-      case NotificationType.doa: return Icons.volunteer_activism_rounded;
-      case NotificationType.system: return Icons.info_rounded;
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case NotificationType.subuh: return Color(0xFF8B5CF6);
-      case NotificationType.dzuhur: return Color(0xFFF59E0B);
-      case NotificationType.ashar: return Color(0xFFEF4444);
-      case NotificationType.maghrib: return Color(0xFFEC4899);
-      case NotificationType.isya: return Color(0xFF3B82F6);
-      case NotificationType.prayer: return Color(0xFF059669);
-      case NotificationType.dzikir: return Color(0xFF06B6D4);
-      case NotificationType.quran: return Color(0xFF10B981);
-      case NotificationType.doa: return Color(0xFFA855F7);
-      case NotificationType.system: return Color(0xFF6B7280);
-    }
-  }
-}
-
-class NotificationItem {
-  final String id;
-  final String title;
-  final String body;
-  final NotificationType type;
-  final DateTime timestamp;
-  final bool isRead;
-  final bool isScheduled;
-
-  NotificationItem({
-    required this.id,
-    required this.title,
-    required this.body,
-    required this.type,
-    required this.timestamp,
-    this.isRead = false,
-    this.isScheduled = false,
-  });
-
-  NotificationItem copyWith({
-    String? id, String? title, String? body,
-    NotificationType? type, DateTime? timestamp,
-    bool? isRead, bool? isScheduled,
-  }) {
-    return NotificationItem(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      body: body ?? this.body,
-      type: type ?? this.type,
-      timestamp: timestamp ?? this.timestamp,
-      isRead: isRead ?? this.isRead,
-      isScheduled: isScheduled ?? this.isScheduled,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'body': body,
-    'type': type.index,
-    'timestamp': timestamp.millisecondsSinceEpoch,
-    'isRead': isRead,
-    'isScheduled': isScheduled,
-  };
-
-  factory NotificationItem.fromJson(Map<String, dynamic> json) {
-    return NotificationItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      type: NotificationType.values[json['type'] as int],
-      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int),
-      isRead: json['isRead'] as bool? ?? false,
-      isScheduled: json['isScheduled'] as bool? ?? false,
     );
   }
 }

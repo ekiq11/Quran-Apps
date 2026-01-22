@@ -1,4 +1,4 @@
-// quran/widget/quran_dialog.dart - ✅ REALTIME INTERACTIVE SETTINGS
+// quran/widget/quran_dialog.dart - ✅ DIALOG + STICKY FAB NAVIGATION
 import 'package:flutter/material.dart';
 import 'package:myquran/quran/widget/tajwid_dialog.dart';
 
@@ -39,12 +39,13 @@ class QuranDialogs {
     );
   }
 
-  // ==================== NEXT SURAH DIALOG ====================
+  // ==================== ✅ COMPLETION DIALOG WITH FAB TRIGGER ====================
   static void showNextSurahDialog({
     required BuildContext context,
     required String currentSurahName,
     required int currentSurahNumber,
     required VoidCallback onContinue,
+    required VoidCallback onLater, // ✅ ADDED - Trigger FAB
   }) {
     showDialog(
       context: context,
@@ -129,7 +130,10 @@ class QuranDialogs {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        onLater(); // ✅ TRIGGER FAB
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
@@ -151,7 +155,10 @@ class QuranDialogs {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
-                      onPressed: onContinue,
+                      onPressed: () {
+                        Navigator.pop(context);
+                        onContinue();
+                      },
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: Color(0xFF059669),
@@ -179,6 +186,222 @@ class QuranDialogs {
                   ),
                 ],
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== ✅ MINIMAL ELEGANT FABs ====================
+class SurahNavigationFABs extends StatefulWidget {
+  final ScrollController scrollController;
+  final bool isVisible; // Controlled by parent
+  final String? nextSurahName;
+  final String? previousSurahName;
+  final VoidCallback? onNextSurah;
+  final VoidCallback? onPreviousSurah;
+  final bool isDarkMode;
+
+  const SurahNavigationFABs({
+    Key? key,
+    required this.scrollController,
+    required this.isVisible,
+    this.nextSurahName,
+    this.previousSurahName,
+    this.onNextSurah,
+    this.onPreviousSurah,
+    this.isDarkMode = false,
+  }) : super(key: key);
+
+  @override
+  State<SurahNavigationFABs> createState() => _SurahNavigationFABsState();
+}
+
+class _SurahNavigationFABsState extends State<SurahNavigationFABs>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  bool _shouldHideFABs = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 250),
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    
+    widget.scrollController.addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    if (!widget.scrollController.hasClients) return;
+    
+    final maxScroll = widget.scrollController.position.maxScrollExtent;
+    final currentScroll = widget.scrollController.position.pixels;
+    
+    final shouldHide = (maxScroll - currentScroll) > 200;
+    
+    if (shouldHide != _shouldHideFABs) {
+      setState(() => _shouldHideFABs = shouldHide);
+    }
+  }
+
+  @override
+  void didUpdateWidget(SurahNavigationFABs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isVisible != oldWidget.isVisible) {
+      if (widget.isVisible && !_shouldHideFABs) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_handleScroll);
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isVisible || _shouldHideFABs) {
+      return SizedBox.shrink();
+    }
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 20,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              decoration: BoxDecoration(
+                color: widget.isDarkMode 
+                    ? Color(0xFF1E293B).withOpacity(0.95)
+                    : Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: widget.isDarkMode
+                      ? Color(0xFF334155).withOpacity(0.5)
+                      : Color(0xFFE5E7EB).withOpacity(0.8),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 20,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onPreviousSurah != null && widget.previousSurahName != null)
+                    _buildMinimalButton(
+                      surahName: widget.previousSurahName!,
+                      isNext: false,
+                      onPressed: widget.onPreviousSurah!,
+                    ),
+                  
+                  if (widget.onPreviousSurah != null && widget.onNextSurah != null)
+                    Container(
+                      width: 1,
+                      height: 32,
+                      margin: EdgeInsets.symmetric(horizontal: 8),
+                      color: widget.isDarkMode
+                          ? Color(0xFF334155).withOpacity(0.5)
+                          : Color(0xFFE5E7EB).withOpacity(0.8),
+                    ),
+                  
+                  if (widget.onNextSurah != null && widget.nextSurahName != null)
+                    _buildMinimalButton(
+                      surahName: widget.nextSurahName!,
+                      isNext: true,
+                      onPressed: widget.onNextSurah!,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMinimalButton({
+    required String surahName,
+    required bool isNext,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(26),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isNext) ...[
+                Icon(
+                  Icons.chevron_left,
+                  size: 18,
+                  color: widget.isDarkMode
+                      ? Color(0xFF94A3B8)
+                      : Color(0xFF6B7280),
+                ),
+                SizedBox(width: 4),
+              ],
+              Text(
+                surahName,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: widget.isDarkMode
+                      ? Color(0xFFE2E8F0)
+                      : Color(0xFF1F2937),
+                  letterSpacing: 0.2,
+                ),
+              ),
+              if (isNext) ...[
+                SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: widget.isDarkMode
+                      ? Color(0xFF94A3B8)
+                      : Color(0xFF6B7280),
+                ),
+              ],
             ],
           ),
         ),
@@ -321,20 +544,12 @@ class _RealtimeSettingsSheetState extends State<_RealtimeSettingsSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ✅ Font Size Section - REALTIME
-                    _buildSectionHeader(
-                      'Ukuran Teks Arab',
-                      Icons.text_fields,
-                    ),
+                    _buildSectionHeader('Ukuran Teks Arab', Icons.text_fields),
                     SizedBox(height: 12),
                     _buildFontSizeSlider(),
                     SizedBox(height: 24),
                     
-                    // ✅ Display Options Section - REALTIME
-                    _buildSectionHeader(
-                      'Opsi Tampilan',
-                      Icons.visibility,
-                    ),
+                    _buildSectionHeader('Opsi Tampilan', Icons.visibility),
                     SizedBox(height: 12),
                     _buildToggleOption(
                       icon: Icons.translate,
@@ -366,11 +581,7 @@ class _RealtimeSettingsSheetState extends State<_RealtimeSettingsSheet> {
                     
                     SizedBox(height: 24),
                     
-                    // ✅ Theme Section - REALTIME
-                    _buildSectionHeader(
-                      'Tema Aplikasi',
-                      Icons.palette,
-                    ),
+                    _buildSectionHeader('Tema Aplikasi', Icons.palette),
                     SizedBox(height: 12),
                     _buildToggleOption(
                       icon: Icons.dark_mode,
@@ -386,10 +597,7 @@ class _RealtimeSettingsSheetState extends State<_RealtimeSettingsSheet> {
                     ),
                     
                     SizedBox(height: 24),
-                    
-                    // Info Footer
                     _buildInfoFooter(),
-                    
                     SizedBox(height: 20),
                   ],
                 ),
