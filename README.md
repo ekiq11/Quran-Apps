@@ -155,11 +155,11 @@ Jika aplikasi ini bermanfaat, jangan lupa:
 
 ## 👨‍💻 Developer
 
-Dikembangkan dengan ❤️ oleh [Nama Anda]
+Dikembangkan dengan ❤️ oleh Ahmad Subki
 
 **Contact:**
-- Email: ahmad.subki1992@gmail.com
-- Instagram: https://instagram.com/ekiq11
+📧 Email: ahmad.subki1992@gmail.com
+💬 WhatsApp: +62 896-9365-2230
 
 ---
 
