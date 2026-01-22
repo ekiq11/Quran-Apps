@@ -29,7 +29,7 @@ android {
         // 🟢 AMAN: tahan dulu di 34
         targetSdk = 35
 
-        versionCode = 33
+        versionCode = 34
         versionName = "5.0"
 
         multiDexEnabled = true

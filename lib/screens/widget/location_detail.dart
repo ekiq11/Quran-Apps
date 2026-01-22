@@ -269,7 +269,7 @@ class LocationDetailSheet extends StatelessWidget {
                     Text(
                       locationData.displayName,
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 16 : 18,
+                        fontSize: isSmallScreen ? 14 : 16,
                         color: Color(0xFF111827),
                         fontWeight: FontWeight.bold,
                         height: 1.2,

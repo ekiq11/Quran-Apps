@@ -8,6 +8,7 @@ import 'package:myquran/notification/notification_center.dart';
 import 'package:myquran/notification/notification_service.dart';
 import 'package:myquran/notification/notification_setting.dart';
 import 'package:myquran/quran/util/islamic_geometries.dart';
+import 'package:myquran/screens/widget/hijriah_bottom_sheet.dart';
 import 'package:myquran/screens/widget/location_detail.dart';
 import 'package:provider/provider.dart';
 import 'package:myquran/provider/dashboard_provider.dart';
@@ -822,7 +823,10 @@ void _refreshGreeting() {
   }
 
   Widget _buildDateInfo(bool isSmallScreen, bool isMediumScreen) {
-    return Row(
+  return InkWell(
+    onTap: () => _showHijriCalendar(context),  // Tambahkan onTap
+    borderRadius: BorderRadius.circular(10),
+    child: Row(
       children: [
         Container(
           padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
@@ -841,7 +845,6 @@ void _refreshGreeting() {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-             
               Text(
                 _getHijriDate(),
                 style: TextStyle(
@@ -870,10 +873,28 @@ void _refreshGreeting() {
             ],
           ),
         ),
+        Icon(  // Tambahkan ikon chevron
+          Icons.chevron_right,
+          color: Color(0xFF9CA3AF),
+          size: 20,
+        ),
       ],
-    );
-  }
-
+    ),
+  );
+}
+void _showHijriCalendar(BuildContext context) {
+  final now = DateTime.now();
+  final hijriNow = HijriCalendar.fromDate(now);
+  
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => HijriCalendarBottomSheet(
+      initialHijriDate: hijriNow,
+    ),
+  );
+}
   Widget _buildMahfudzotInfo(bool isSmallScreen, bool isMediumScreen) {
     return Consumer<DashboardProvider>(
       builder: (context, provider, child) {
