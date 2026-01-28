@@ -1,5 +1,5 @@
-// lib/services/prayer_time_service.dart - ENHANCED v4.0
-// ✅ Added: Imsak, Syuruk, and Duha times
+// lib/services/prayer_time_service.dart - ENHANCED v5.0
+// ✅ Updated: Replaced Imsak with Tahajud (last third of the night)
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,36 +43,45 @@ class PrayerTimeService {
       final params = _getCalculationParameters(location.latitude, location.longitude);
       final prayerTimes = PrayerTimes.today(coordinates, params);
       
-      // Calculate Imsak (10 minutes before Fajr)
-      final imsakTime = _subtractMinutes(
-        TimeOfDay(hour: prayerTimes.fajr.hour, minute: prayerTimes.fajr.minute),
-        10,
-      );
-      
-      // Get Subuh and Syuruk times
+      // Get Subuh time
       final subuhTime = TimeOfDay(
         hour: prayerTimes.fajr.hour,
         minute: prayerTimes.fajr.minute,
       );
       
+      // Get previous Isya time (for Tahajud calculation)
+      final yesterday = DateTime.now().subtract(Duration(days: 1));
+      final yesterdayComponents = DateComponents(yesterday.year, yesterday.month, yesterday.day);
+      final yesterdayPrayerTimes = PrayerTimes(coordinates, yesterdayComponents, params);
+      final previousIsyaTime = TimeOfDay(
+        hour: yesterdayPrayerTimes.isha.hour,
+        minute: yesterdayPrayerTimes.isha.minute,
+      );
+      
+      // ✅ Calculate Tahajud time (last third of the night)
+      // Formula: Isya + (2/3 × (Subuh - Isya))
+      final tahajudTime = _calculateTahajudTime(previousIsyaTime, subuhTime);
+      
+      // Get Syuruk time
       final syurukTime = TimeOfDay(
         hour: prayerTimes.sunrise.hour,
         minute: prayerTimes.sunrise.minute,
       );
       
-      // Calculate Duha time (Syuruk + 1/3 of (Syuruk - Subuh))
-      final duhaTime = _calculateDuhaTime(subuhTime, syurukTime);
+      // Calculate Duha time (Syuruk + 1/3 of (Dzuhur - Syuruk))
+      final dzuhurTime = TimeOfDay(
+        hour: prayerTimes.dhuhr.hour,
+        minute: prayerTimes.dhuhr.minute,
+      );
+      final duhaTime = _calculateDuhaTime(syurukTime, dzuhurTime);
       
       final model = PrayerTimeModel(
         times: {
-          'Imsak': imsakTime,
+          'Tahajud': tahajudTime, // ✅ CHANGED: Imsak → Tahajud
           'Subuh': subuhTime,
           'Syuruk': syurukTime,
           'Duha': duhaTime,
-          'Dzuhur': TimeOfDay(
-            hour: prayerTimes.dhuhr.hour,
-            minute: prayerTimes.dhuhr.minute,
-          ),
+          'Dzuhur': dzuhurTime,
           'Ashar': TimeOfDay(
             hour: prayerTimes.asr.hour,
             minute: prayerTimes.asr.minute,
@@ -121,15 +130,42 @@ class PrayerTimeService {
     }
   }
 
+  // ✅ NEW: Calculate Tahajud time (last third of the night)
+  // Formula: Isya + (2/3 × (Subuh - Isya))
+  // This gives us the start of the last third of the night
+  TimeOfDay _calculateTahajudTime(TimeOfDay isya, TimeOfDay subuh) {
+    // Convert to minutes from midnight
+    int isyaMinutes = isya.hour * 60 + isya.minute;
+    int subuhMinutes = subuh.hour * 60 + subuh.minute;
+    
+    // Handle case where Subuh is after midnight (next day)
+    if (subuhMinutes < isyaMinutes) {
+      subuhMinutes += 24 * 60; // Add 24 hours
+    }
+    
+    // Calculate night duration
+    int nightDuration = subuhMinutes - isyaMinutes;
+    
+    // Calculate start of last third (Isya + 2/3 of night)
+    int twoThirdsNight = (nightDuration * 2 / 3).round();
+    int tahajudMinutes = isyaMinutes + twoThirdsNight;
+    
+    // Convert back to TimeOfDay (handle overflow past midnight)
+    int hour = (tahajudMinutes ~/ 60) % 24;
+    int minute = tahajudMinutes % 60;
+    
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
   // ✅ Calculate Duha time using astronomical formula
-  // Formula: Syuruk + 1/3 × (Syuruk - Subuh)
-  TimeOfDay _calculateDuhaTime(TimeOfDay subuh, TimeOfDay syuruk) {
+  // Formula: Syuruk + 1/3 × (Dzuhur - Syuruk)
+  TimeOfDay _calculateDuhaTime(TimeOfDay syuruk, TimeOfDay dzuhur) {
     // Convert to minutes
-    final subuhMinutes = subuh.hour * 60 + subuh.minute;
     final syurukMinutes = syuruk.hour * 60 + syuruk.minute;
+    final dzuhurMinutes = dzuhur.hour * 60 + dzuhur.minute;
     
     // Calculate difference
-    final difference = syurukMinutes - subuhMinutes;
+    final difference = dzuhurMinutes - syurukMinutes;
     
     // Add 1/3 of difference to Syuruk time
     final oneThirdDiff = (difference / 3).round();
@@ -188,7 +224,7 @@ class PrayerTimeService {
       
       final prefs = await SharedPreferences.getInstance();
       
-      // Save each prayer time
+      // ✅ Save each prayer time (including Tahajud and Duha)
       for (var entry in times.entries) {
         final prayerName = entry.key.toLowerCase();
         final time = entry.value;
@@ -196,13 +232,22 @@ class PrayerTimeService {
         await prefs.setInt('prayer_${prayerName}_hour', time.hour);
         await prefs.setInt('prayer_${prayerName}_minute', time.minute);
         
+        // ✅ Also save to tilawah keys for backward compatibility
+        if (prayerName == 'tahajud') {
+          await prefs.setInt('tilawah_tahajud_hour', time.hour);
+          await prefs.setInt('tilawah_tahajud_minute', time.minute);
+        } else if (prayerName == 'duha') {
+          await prefs.setInt('tilawah_duha_hour', time.hour);
+          await prefs.setInt('tilawah_duha_minute', time.minute);
+        }
+        
         print('   ✅ $prayerName: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
       }
       
       // Save timestamp
       await prefs.setInt('prayer_times_last_updated', DateTime.now().millisecondsSinceEpoch);
       
-      print('✅ Prayer times saved to SharedPreferences');
+      print('✅ Prayer times saved to SharedPreferences (${times.length} times)');
       
     } catch (e) {
       print('❌ Error saving prayer times to prefs: $e');
@@ -397,36 +442,45 @@ class PrayerTimeService {
       final dateComponents = DateComponents(date.year, date.month, date.day);
       final prayerTimes = PrayerTimes(coordinates, dateComponents, params);
       
-      // Calculate Imsak
-      final imsakTime = _subtractMinutes(
-        TimeOfDay(hour: prayerTimes.fajr.hour, minute: prayerTimes.fajr.minute),
-        10,
+      // Get previous day's Isya for Tahajud calculation
+      final previousDay = date.subtract(Duration(days: 1));
+      final previousDateComponents = DateComponents(previousDay.year, previousDay.month, previousDay.day);
+      final previousPrayerTimes = PrayerTimes(coordinates, previousDateComponents, params);
+      
+      final previousIsyaTime = TimeOfDay(
+        hour: previousPrayerTimes.isha.hour,
+        minute: previousPrayerTimes.isha.minute,
       );
       
-      // Get Subuh and Syuruk
+      // Get Subuh
       final subuhTime = TimeOfDay(
         hour: prayerTimes.fajr.hour,
         minute: prayerTimes.fajr.minute,
       );
       
+      // Calculate Tahajud
+      final tahajudTime = _calculateTahajudTime(previousIsyaTime, subuhTime);
+      
+      // Get Syuruk
       final syurukTime = TimeOfDay(
         hour: prayerTimes.sunrise.hour,
         minute: prayerTimes.sunrise.minute,
       );
       
       // Calculate Duha
-      final duhaTime = _calculateDuhaTime(subuhTime, syurukTime);
+      final dzuhurTime = TimeOfDay(
+        hour: prayerTimes.dhuhr.hour,
+        minute: prayerTimes.dhuhr.minute,
+      );
+      final duhaTime = _calculateDuhaTime(syurukTime, dzuhurTime);
       
       return PrayerTimeModel(
         times: {
-          'Imsak': imsakTime,
+          'Tahajud': tahajudTime,
           'Subuh': subuhTime,
           'Syuruk': syurukTime,
           'Duha': duhaTime,
-          'Dzuhur': TimeOfDay(
-            hour: prayerTimes.dhuhr.hour,
-            minute: prayerTimes.dhuhr.minute,
-          ),
+          'Dzuhur': dzuhurTime,
           'Ashar': TimeOfDay(
             hour: prayerTimes.asr.hour,
             minute: prayerTimes.asr.minute,
@@ -457,7 +511,7 @@ class PrayerTimeService {
       final prefs = await SharedPreferences.getInstance();
       final times = <String, TimeOfDay>{};
       
-      final prayers = ['Imsak', 'Subuh', 'Syuruk', 'Duha', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'];
+      final prayers = ['Tahajud', 'Subuh', 'Syuruk', 'Duha', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'];
       
       for (final prayer in prayers) {
         final hourKey = 'prayer_${prayer.toLowerCase()}_hour';

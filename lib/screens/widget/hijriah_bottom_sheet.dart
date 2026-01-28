@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:myquran/screens/util/daily_advice.dart';
 import 'package:myquran/screens/util/islamic_event.dart';
+import 'package:myquran/screens/widget/daily_poster.dart';
 
 class HijriCalendarBottomSheet extends StatefulWidget {
   final HijriCalendar initialHijriDate;
@@ -294,6 +296,24 @@ class _HijriCalendarBottomSheetState extends State<HijriCalendarBottomSheet> {
         .any((e) => e.type == IslamicEventType.fastingObligatory);
 
     return InkWell(
+      // Di dalam _buildDayCell() tambahkan:
+onLongPress: () {
+  // Ambil nasihat harian
+  DailyAdvice advice = IslamicDailyAdvices.getAdviceForDay(hijriDay);
+  
+  // Buka poster
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DailyAdvicePosterPage(
+        hijriDate: '$hijriDay ${hijriMonths[currentMonth - 1]} $currentYear H',
+        gregorianDate: DateFormat('dd MMMM yyyy', 'id_ID').format(gregorianDate),
+        advice: advice.advice,
+        source: advice.source,
+      ),
+    ),
+  );
+},
       onTap: () {
         setState(() {
           selectedHijriDate = HijriCalendar();

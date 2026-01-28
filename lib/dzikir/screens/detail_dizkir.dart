@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myquran/dzikir/model/model_dzikir.dart';
+import 'package:myquran/dzikir/screens/share_dzikir.dart';
 
 
 class DzikirDetailPage extends StatefulWidget {
@@ -129,10 +130,23 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
         ),
         centerTitle: true,
         actions: [
+          // ✅ TOMBOL SHARE
+          IconButton(
+            icon: Icon(Icons.share, color: Colors.white),
+            iconSize: screenWidth < 360 ? 22 : 24,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _openSharePage();
+            },
+          ),
+          // ✅ TOMBOL COPY
           IconButton(
             icon: Icon(Icons.copy, color: Colors.white),
             iconSize: screenWidth < 360 ? 22 : 24,
-            onPressed: _shareDzikir,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _copyDzikir();
+            },
           ),
         ],
       ),
@@ -717,7 +731,21 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
     );
   }
 
-  void _shareDzikir() {
+  // ✅ FUNGSI UNTUK MEMBUKA HALAMAN SHARE
+  void _openSharePage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DzikirShareFullScreenPage(
+          dzikir: widget.dzikirs[_currentIndex],
+          type: widget.type,
+        ),
+      ),
+    );
+  }
+
+  // ✅ FUNGSI COPY DZIKIR (RENAME dari _shareDzikir)
+  void _copyDzikir() {
     final dzikir = widget.dzikirs[_currentIndex];
     final text = '''
 ${dzikir.nama}

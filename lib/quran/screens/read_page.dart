@@ -1,4 +1,4 @@
-// screens/quran_read_page.dart - WITH JUMP TO AYAH FEATURE
+// screens/quran_read_page.dart - FIXED: Highlight when marking as last read
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:myquran/quran/helper/jump_ayat.dart';
@@ -225,7 +225,6 @@ class _QuranReadPageState extends State<QuranReadPage> {
     );
   }
 
-  // ✅ NEW: Show Jump to Ayah Dialog
   void _showJumpToAyahDialog() {
     if (_surah == null) return;
     
@@ -239,7 +238,6 @@ class _QuranReadPageState extends State<QuranReadPage> {
         surahName: _surah!.nameLatin,
         isDarkMode: _isDarkMode,
         onJump: (ayahNumber) {
-          // Jump to selected ayah
           setState(() {
             _targetAyah = ayahNumber;
             _isFromLastRead = false;
@@ -378,6 +376,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
     );
   }
 
+  // ✅ FIXED: Highlight ayah immediately when marked as last read
   Future<void> _saveLastRead(int ayahNumber) async {
     if (_surah == null) return;
     
@@ -390,13 +389,19 @@ class _QuranReadPageState extends State<QuranReadPage> {
       );
       await _quranService.saveLastRead(bookmark);
       
+      // ✅ FIX: Update state dan set sebagai target untuk trigger highlight
       setState(() {
         _lastReadAyah = ayahNumber;
+        _targetAyah = ayahNumber; // ✅ Set sebagai target ayah (ini yang bikin highlight!)
+        _isFromLastRead = true; // ✅ Mark sebagai dari last read (warna hijau)
+        _showLastReadBanner = false; // Hide banner karena sudah di posisi
       });
       
       if (mounted) {
         _showSuccessSnackbar('Tersimpan sebagai terakhir dibaca');
       }
+      
+      debugPrint('✅ Last read saved: Ayat $ayahNumber (highlighted)');
     } catch (e) {
       debugPrint('❌ Error saving last read: $e');
       if (mounted) {
@@ -570,7 +575,6 @@ class _QuranReadPageState extends State<QuranReadPage> {
       body: _isLoading
           ? _buildLoadingState(theme)
           : _buildContent(isTablet, theme),
-      // ✅ ADD JUMP TO AYAH FAB
       floatingActionButton: !_isLoading && _surah != null
           ? JumpAyahFAB(
               scrollController: _scrollController,
@@ -796,7 +800,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
         left: isTablet ? 24 : 16,
         right: isTablet ? 24 : 16,
         top: topPadding,
-        bottom: 100, // Extra padding for FABs
+        bottom: 100,
       ),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -812,7 +816,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
               showTajwid: _showTajwid,
               isDarkMode: _isDarkMode,
               isBookmarked: _bookmarkedAyahs.contains(ayahNumber),
-              isTargetAyah: _targetAyah == ayahNumber,
+              isTargetAyah: _targetAyah == ayahNumber, // ✅ Ini yang trigger highlight!
               isPlayingThis: _audioService.isAyahPlaying(widget.surahNumber, ayahNumber),
               isTablet: isTablet,
               onPlayAudio: () => _playAyahAudio(ayahNumber),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myquran/doa/model/model_doa.dart';
+import 'package:myquran/doa/screens/share_doa.dart';
 
 
 class DoaDetailPage extends StatefulWidget {
@@ -60,11 +61,20 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
         ),
         centerTitle: true,
         actions: [
+          // ✅ TOMBOL SHARE
+          IconButton(
+            icon: Icon(Icons.share, color: Colors.white),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _openSharePage();
+            },
+          ),
+          // ✅ TOMBOL COPY
           IconButton(
             icon: Icon(Icons.copy, color: Colors.white),
             onPressed: () {
               HapticFeedback.lightImpact();
-              _shareDoa();
+              _copyDoa();
             },
           ),
         ],
@@ -505,7 +515,20 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
     );
   }
 
-  void _shareDoa() {
+  // ✅ FUNGSI UNTUK MEMBUKA HALAMAN SHARE
+  void _openSharePage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DoaShareFullScreenPage(
+          doa: widget.doas[_currentIndex],
+        ),
+      ),
+    );
+  }
+
+  // ✅ FUNGSI COPY DOA (RENAME dari _shareDoa)
+  void _copyDoa() {
     final doa = widget.doas[_currentIndex];
     final text = '''
 ${doa.nama}

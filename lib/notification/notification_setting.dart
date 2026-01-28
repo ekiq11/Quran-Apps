@@ -1,4 +1,5 @@
-// screens/settings/notification_settings_page.dart - v2.0 WITH DOA
+// screens/settings/notification_settings_page.dart - v3.0 ALL PRAYERS
+// ✅ Support for ALL 7 prayer times: Tahajud, Subuh, Duha, Dzuhur, Ashar, Maghrib, Isya
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myquran/notification/notification_manager.dart';
@@ -15,8 +16,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   final NotificationManager _notificationManager = NotificationManager();
   final PrayerTimeService _prayerTimeService = PrayerTimeService();
   
-  // Prayer notifications
+  // ✅ ALL PRAYER NOTIFICATIONS (7 prayer times)
+  bool _enableTahajud = true;
   bool _enableSubuh = true;
+  bool _enableDuha = true;
   bool _enableDzuhur = true;
   bool _enableAshar = true;
   bool _enableMaghrib = true;
@@ -35,7 +38,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   TimeOfDay _tilawahSiangTime = const TimeOfDay(hour: 13, minute: 0);
   TimeOfDay _tilawahMalamTime = const TimeOfDay(hour: 20, minute: 0);
   
-  // ✅ NEW: Doa notifications
+  // Doa notifications
   bool _enableDoaPagi = true;
   bool _enableDoaPetang = true;
   
@@ -60,8 +63,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      // Prayer
+      // ✅ ALL Prayer times
+      _enableTahajud = prefs.getBool('notif_enable_tahajud') ?? true;
       _enableSubuh = prefs.getBool('notif_enable_subuh') ?? true;
+      _enableDuha = prefs.getBool('notif_enable_duha') ?? true;
       _enableDzuhur = prefs.getBool('notif_enable_dzuhur') ?? true;
       _enableAshar = prefs.getBool('notif_enable_ashar') ?? true;
       _enableMaghrib = prefs.getBool('notif_enable_maghrib') ?? true;
@@ -80,7 +85,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       _tilawahSiangTime = _loadTime(prefs, 'tilawah_time_siang', const TimeOfDay(hour: 13, minute: 0));
       _tilawahMalamTime = _loadTime(prefs, 'tilawah_time_malam', const TimeOfDay(hour: 20, minute: 0));
       
-      // ✅ NEW: Doa
+      // Doa
       _enableDoaPagi = prefs.getBool('notif_enable_doa_pagi') ?? true;
       _enableDoaPetang = prefs.getBool('notif_enable_doa_petang') ?? true;
       
@@ -156,8 +161,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Save prayer
+      // ✅ Save ALL prayer times
+      await prefs.setBool('notif_enable_tahajud', _enableTahajud);
       await prefs.setBool('notif_enable_subuh', _enableSubuh);
+      await prefs.setBool('notif_enable_duha', _enableDuha);
       await prefs.setBool('notif_enable_dzuhur', _enableDzuhur);
       await prefs.setBool('notif_enable_ashar', _enableAshar);
       await prefs.setBool('notif_enable_maghrib', _enableMaghrib);
@@ -176,7 +183,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       await prefs.setString('tilawah_time_siang', '${_tilawahSiangTime.hour}:${_tilawahSiangTime.minute}');
       await prefs.setString('tilawah_time_malam', '${_tilawahMalamTime.hour}:${_tilawahMalamTime.minute}');
       
-      // ✅ NEW: Save doa
+      // Save doa
       await prefs.setBool('notif_enable_doa_pagi', _enableDoaPagi);
       await prefs.setBool('notif_enable_doa_petang', _enableDoaPetang);
       
@@ -187,11 +194,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       // Get prayer times
       final prayerTimes = await _prayerTimeService.calculatePrayerTimes();
       
-      // Reschedule
+      // ✅ Reschedule with ALL prayer times
       await _notificationManager.scheduleAllNotifications(
         prayerTimes: prayerTimes.times,
         enabledPrayers: {
+          'Tahajud': _enableTahajud,
           'Subuh': _enableSubuh,
+          'Duha': _enableDuha,
           'Dzuhur': _enableDzuhur,
           'Ashar': _enableAshar,
           'Maghrib': _enableMaghrib,
@@ -202,7 +211,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           'Siang': _tilawahSiangTime,
           'Malam': _tilawahMalamTime,
         },
-        // ✅ NEW: Doa times (auto-calculated from prayer times)
         doaTimes: {
           'Pagi': _addMinutes(prayerTimes.times['Subuh']!, 15),
           'Petang': _addMinutes(prayerTimes.times['Maghrib']!, 10),
@@ -269,13 +277,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               children: [
                 _buildStatusCard(),
                 const SizedBox(height: 16),
+                
+                // ✅ Prayer Section - ALL 7 TIMES
                 _buildPrayerSection(),
                 const SizedBox(height: 16),
+                
                 _buildDzikirSection(),
                 const SizedBox(height: 16),
                 _buildTilawahSection(),
                 const SizedBox(height: 16),
-                _buildDoaSection(), // ✅ NEW
+                _buildDoaSection(),
                 const SizedBox(height: 16),
                 _buildSettingsSection(),
                 const SizedBox(height: 16),
@@ -360,18 +371,59 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
+  // ✅ UPDATED: Prayer Section with ALL 7 prayer times
   Widget _buildPrayerSection() {
     return _buildSection(
-      'Waktu Sholat',
+      'Waktu Sholat (Semua Waktu)',
       Icons.mosque,
       const Color(0xFF059669),
       [
-        _buildSwitch('Subuh', _enableSubuh, (v) => setState(() => _enableSubuh = v)),
-        _buildSwitch('Dzuhur', _enableDzuhur, (v) => setState(() => _enableDzuhur = v)),
-        _buildSwitch('Ashar', _enableAshar, (v) => setState(() => _enableAshar = v)),
-        _buildSwitch('Maghrib', _enableMaghrib, (v) => setState(() => _enableMaghrib = v)),
-        _buildSwitch('Isya', _enableIsya, (v) => setState(() => _enableIsya = v)),
+        // ✅ Sholat Wajib
+        _buildSectionHeader('Sholat Fardhu (5 Waktu)', Icons.star, const Color(0xFFF59E0B)),
+        _buildSwitch('Subuh 🌅', _enableSubuh, (v) => setState(() => _enableSubuh = v)),
+        _buildSwitch('Dzuhur 🌞', _enableDzuhur, (v) => setState(() => _enableDzuhur = v)),
+        _buildSwitch('Ashar 🌤️', _enableAshar, (v) => setState(() => _enableAshar = v)),
+        _buildSwitch('Maghrib 🌆', _enableMaghrib, (v) => setState(() => _enableMaghrib = v)),
+        _buildSwitch('Isya 🌃', _enableIsya, (v) => setState(() => _enableIsya = v)),
+        
+        const Divider(height: 24),
+        
+        // ✅ Sholat Sunnah
+        _buildSectionHeader('Sholat Sunnah (2 Waktu)', Icons.auto_awesome, const Color(0xFF8B5CF6)),
+        _buildSwitch(
+          'Tahajud 🌙', 
+          _enableTahajud, 
+          (v) => setState(() => _enableTahajud = v),
+          subtitle: 'Sepertiga malam terakhir',
+        ),
+        _buildSwitch(
+          'Duha ☀️', 
+          _enableDuha, 
+          (v) => setState(() => _enableDuha = v),
+          subtitle: 'Pagi hari setelah syuruk',
+        ),
       ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -428,7 +480,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
-  // ✅ NEW: Doa Section
   Widget _buildDoaSection() {
     return _buildSection(
       'Pengingat Doa',
@@ -530,64 +581,64 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     );
   }
 
- Widget _buildTimeTile(
-  String title,
-  bool enabled,
-  TimeOfDay time,
-  Function(bool) onChanged,
-  VoidCallback onTimeTap,
-) {
-  return ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-    title: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF111827),
-        letterSpacing: -0.2,
+  Widget _buildTimeTile(
+    String title,
+    bool enabled,
+    TimeOfDay time,
+    Function(bool) onChanged,
+    VoidCallback onTimeTap,
+  ) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF111827),
+          letterSpacing: -0.2,
+        ),
       ),
-    ),
-    trailing: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        InkWell(
-          onTap: enabled ? onTimeTap : null,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.access_time_rounded,
-                  size: 16,
-                  color: enabled ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _fmt(time),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: enabled ? const Color(0xFF059669) : const Color(0xFF6B7280),
-                    fontWeight: FontWeight.w600,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: enabled ? onTimeTap : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.access_time_rounded,
+                    size: 16,
+                    color: enabled ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    _fmt(time),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: enabled ? const Color(0xFF059669) : const Color(0xFF6B7280),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Switch(
-          value: enabled,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF059669),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(width: 12),
+          Switch(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF059669),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildActionButtons() {
     return SizedBox(

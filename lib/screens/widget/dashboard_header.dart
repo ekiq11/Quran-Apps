@@ -2143,6 +2143,15 @@ Widget _buildTextContent({
   );
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ✅ FIXED: _buildAllPrayerRows & _buildPrayerRow
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 
+// PASTE THESE 2 METHODS INTO dashboard_header.dart
+// Replace the existing _buildAllPrayerRows and _buildPrayerRow
+//
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 // ✅ Build all prayer rows in proper order with visual grouping
 List<Widget> _buildAllPrayerRows(
   Map<String, TimeOfDay> times,
@@ -2154,7 +2163,7 @@ List<Widget> _buildAllPrayerRows(
   
   // Order of prayers to display
   final orderedPrayers = [
-    'Imsak',
+    'Tahajud',  // ✅ Included in display
     'Subuh',
     'Syuruk',
     'Duha',
@@ -2164,8 +2173,9 @@ List<Widget> _buildAllPrayerRows(
     'Isya',
   ];
   
-  // Special prayers (not for salah reminders)
-  final specialPrayers = {'Imsak', 'Syuruk', 'Duha'};
+  // ✅ CRITICAL FIX: Only Syuruk is informational (not a prayer time)
+  // Tahajud and Duha ARE included in next prayer calculation
+  final informationalOnly = {'Syuruk'}; // ONLY Syuruk is non-prayer
   
   for (int i = 0; i < orderedPrayers.length; i++) {
     final prayerName = orderedPrayers[i];
@@ -2190,7 +2200,7 @@ List<Widget> _buildAllPrayerRows(
         nextPrayerName,
         isSmallScreen,
         isMediumScreen,
-        isSpecial: specialPrayers.contains(prayerName),
+        isInformational: informationalOnly.contains(prayerName),
       ));
     }
   }
@@ -2204,16 +2214,19 @@ Widget _buildPrayerRow(
   String nextPrayerName,
   bool isSmallScreen,
   bool isMediumScreen, {
-  bool isSpecial = false,
+  bool isInformational = false, // Only true for Syuruk
 }) {
   final isNext = name == nextPrayerName;
   final timeString = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   
+  // ✅ Determine prayer type for styling
+  final isSunnah = (name == 'Tahajud' || name == 'Duha'); // Sunnah prayers
+  
   // Icons for different prayer times
   IconData getIcon() {
     switch (name) {
-      case 'Imsak':
-        return Icons.bedtime_outlined;
+      case 'Tahajud':
+        return Icons.nightlight;
       case 'Subuh':
         return Icons.nights_stay_outlined;
       case 'Syuruk':
@@ -2233,18 +2246,60 @@ Widget _buildPrayerRow(
     }
   }
   
-  // Label for special prayers
+  // Label for special times
   String? getLabel() {
     switch (name) {
-      case 'Imsak':
-        return 'Batas Sahur';
+      case 'Tahajud':
+        return 'Sepertiga Malam Terakhir';
       case 'Syuruk':
-        return 'Terbit';
+        return 'Terbit Matahari';
       case 'Duha':
         return 'Sholat Duha';
       default:
         return null;
     }
+  }
+  
+  // ✅ Background color logic
+  Color getBackgroundColor() {
+    if (isNext) {
+      return AppColors.primary.withOpacity(0.08); // Green for next prayer
+    }
+    if (isSunnah) {
+      return Colors.purple[50]!; // Purple for sunnah (Tahajud, Duha)
+    }
+    if (isInformational) {
+      return Colors.amber[50]!; // Amber for informational (Syuruk only)
+    }
+    return Colors.grey[50]!; // Grey for regular fardhu
+  }
+  
+  // ✅ Icon color logic
+  Color getIconColor() {
+    if (isNext) {
+      return AppColors.primary;
+    }
+    if (isSunnah) {
+      return Colors.purple[700]!;
+    }
+    if (isInformational) {
+      return Colors.amber[800]!;
+    }
+    return Color(0xFF616161);
+  }
+  
+  // ✅ Icon background color logic
+  Color getIconBackgroundColor() {
+    if (isNext) {
+      return AppColors.primary.withOpacity(0.15);
+    }
+    if (isSunnah) {
+      return Colors.purple[100]!;
+    }
+    if (isInformational) {
+      return Colors.amber[100]!;
+    }
+    return Colors.grey[200]!;
   }
   
   return Container(
@@ -2254,9 +2309,7 @@ Widget _buildPrayerRow(
       vertical: isSmallScreen ? 10 : 12,
     ),
     decoration: BoxDecoration(
-      color: isNext
-          ? AppColors.primary.withOpacity(0.08)
-          : (isSpecial ? Colors.amber[50] : Colors.grey[50]),
+      color: getBackgroundColor(),
       borderRadius: BorderRadius.circular(10),
       border: isNext
           ? Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5)
@@ -2264,42 +2317,69 @@ Widget _buildPrayerRow(
     ),
     child: Row(
       children: [
+        // Icon container
         Container(
           padding: EdgeInsets.all(isSmallScreen ? 6 : 7),
           decoration: BoxDecoration(
-            color: isNext
-                ? AppColors.primary.withOpacity(0.15)
-                : (isSpecial ? Colors.amber[100] : Colors.grey[200]),
+            color: getIconBackgroundColor(),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             getIcon(),
             size: isSmallScreen ? 16 : 18,
-            color: isNext
-                ? AppColors.primary
-                : (isSpecial ? Colors.amber[800] : Color(0xFF616161)),
+            color: getIconColor(),
           ),
         ),
         SizedBox(width: isSmallScreen ? 10 : 12),
+        
+        // Text content
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 13 : 14,
-                  fontWeight: isNext ? FontWeight.w700 : FontWeight.w600,
-                  color: isNext ? AppColors.primaryDark : Color(0xFF212121),
-                ),
+              // Prayer name with optional badge
+              Row(
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      fontWeight: isNext ? FontWeight.w700 : FontWeight.w600,
+                      color: isNext ? AppColors.primaryDark : Color(0xFF212121),
+                    ),
+                  ),
+                  // ✅ SUNNAH Badge for Tahajud & Duha
+                  if (isSunnah) ...[
+                    SizedBox(width: 6),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.purple[700],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'SUNNAH',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
+              // Label text
               if (getLabel() != null) ...[
                 SizedBox(height: 2),
                 Text(
                   getLabel()!,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 10 : 11,
-                    color: isSpecial ? Colors.amber[800] : Colors.grey[600],
+                    color: isSunnah 
+                        ? Colors.purple[700]
+                        : (isInformational ? Colors.amber[800] : Colors.grey[600]),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -2307,6 +2387,8 @@ Widget _buildPrayerRow(
             ],
           ),
         ),
+        
+        // Time text
         Text(
           timeString,
           style: TextStyle(
@@ -2316,6 +2398,8 @@ Widget _buildPrayerRow(
             letterSpacing: 0.5,
           ),
         ),
+        
+        // Notification icon if next
         if (isNext) ...[
           SizedBox(width: 8),
           Container(
