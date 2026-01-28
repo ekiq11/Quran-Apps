@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "total": 50,
+  "data": [
+    { "id": 100, "arabic": "مَنْ زَرَعَ حَصَدَ", "latin": "Man zara'a ḥaṣada", "meaning": "Siapa menanam akan menuai" },
+
+    { "id": 101, "arabic": "الصَّدِيقُ وَقْتَ الضِّيقِ", "latin": "Aṣ-ṣadīqu waqtaḍ ḍīq", "meaning": "Teman sejati terlihat di saat susah" },
+    { "id": 102, "arabic": "مَنْ شَابَهَ أَبَاهُ فَمَا ظَلَمَ", "latin": "Man shābaha abāhu famā ẓalama", "meaning": "Siapa mirip ayahnya tidak salah" },
+    { "id": 103, "arabic": "الطُّيُورُ عَلَى أَشْكَالِهَا تَقَعُ", "latin": "Aṭ-ṭuyūru 'alā ashkālihā taqa'", "meaning": "Burung hinggap sesuai jenisnya" },
+    { "id": 104, "arabic": "إِذَا تَكَلَّمْتَ بِالْكَلِمَةِ مَلَكَتْكَ", "latin": "Idhā takallamt bil kalimati malakat", "meaning": "Jika kamu mengucapkan kata, ia akan menguasaimu" },
+    { "id": 105, "arabic": "وَإِذَا لَمْ تَتَكَلَّمْ مَلَكْتَهَا", "latin": "Wa idhā lam tatakallam malaktahā", "meaning": "Jika tidak mengucapkan, kamu menguasainya" },
+
+    { "id": 106, "arabic": "لِكُلِّ مَقَامٍ مَقَالٌ", "latin": "Likulli maqāmin maqāl", "meaning": "Setiap tempat ada aturannya" },
+    { "id": 107, "arabic": "إِنَّ مَعَ الْعُسْرِ يُسْرًا", "latin": "Inna ma'al 'usri yusrā", "meaning": "Sesungguhnya bersama kesulitan ada kemudahan" },
+    { "id": 108, "arabic": "الْحَاجَةُ أُمُّ الِاخْتِرَاعِ", "latin": "Al-ḥājatu ummul ikhtirā'", "meaning": "Kebutuhan adalah ibu dari penemuan" },
+    { "id": 109, "arabic": "الْمَرْءُ عَدُوُّ مَا جَهِلَ", "latin": "Al-mar'u 'aduwwu mā jahila", "meaning": "Manusia adalah musuh dari yang tidak diketahuinya" },
+    { "id": 110, "arabic": "مَنْ لَزِمَ الِاسْتِغْفَارَ جَعَلَ اللّٰهُ لَهُ مَخْرَجًا", "latin": "Man lazimal istighfāra ja'alallāhu lahu makhrajā", "meaning": "Siapa istiqomah beristighfar, Allah beri jalan keluar" },
+
+    { "id": 111, "arabic": "النِّيَّةُ أَسَاسُ الْعَمَلِ", "latin": "An-niyyatu asāsul 'amal", "meaning": "Niat adalah dasar amal" },
+    { "id": 112, "arabic": "الْأَعْمَالُ بِالنِّيَّاتِ", "latin": "Al-a'mālu bin niyyāt", "meaning": "Amal bergantung pada niat" },
+    { "id": 113, "arabic": "الْجَزَاءُ مِنْ جِنْسِ الْعَمَلِ", "latin": "Al-jazā'u min jinsil 'amal", "meaning": "Balasan sesuai dengan perbuatan" },
+    { "id": 114, "arabic": "كَمَا تَزْرَعُ تَحْصُدُ", "latin": "Kamā tazra'u taḥṣud", "meaning": "Seperti yang kamu tanam, begitulah yang kamu tuai" },
+    { "id": 115, "arabic": "الظُّلْمُ مَرْتَعُهُ وَخِيمٌ", "latin": "Aẓ-ẓulmu marta'uhu wakhīm", "meaning": "Kezaliman akibatnya buruk" },
+
+    { "id": 116, "arabic": "اتَّقِ شَرَّ مَنْ أَحْسَنْتَ إِلَيْهِ", "latin": "Ittaqi sharra man aḥsanta ilaih", "meaning": "Waspadalah dari kejahatan orang yang telah kamu beri kebaikan" },
+    { "id": 117, "arabic": "الْوِقَايَةُ خَيْرٌ مِنَ الْعِلَاجِ", "latin": "Al-wiqāyatu khairun minal 'ilāj", "meaning": "Pencegahan lebih baik dari pengobatan" },
+    { "id": 118, "arabic": "الْحَذَرُ لَا يَمْنَعُ الْقَدَرَ", "latin": "Al-ḥadharu lā yamna'ul qadar", "meaning": "Kehati-hatian tidak mencegah takdir" },
+    { "id": 119, "arabic": "الْوَقْتُ مِنْ ذَهَبٍ", "latin": "Al-waqtu min dhahabin", "meaning": "Waktu adalah emas" },
+    { "id": 120, "arabic": "الْوَقْتُ أَنْفَسُ مِنَ الذَّهَبِ", "latin": "Al-waqtu anfasu minadh dhahab", "meaning": "Waktu lebih berharga dari emas" },
+
+    { "id": 121, "arabic": "لَا تُؤَخِّرْ عَمَلَ السَّاعَةِ إِلَى سَاعَةٍ", "latin": "Lā tu'akhkhir 'amalas sā'ati ilā sā'ah", "meaning": "Jangan tunda pekerjaan sesaat ke waktu lain" },
+    { "id": 122, "arabic": "مَنْ أَرَادَ الْعِزَّةَ فَلْيُطِعِ اللّٰهَ", "latin": "Man arādal 'izzata falyuṭi'illāh", "meaning": "Siapa menginginkan kemuliaan hendaklah taat kepada Allah" },
+    { "id": 123, "arabic": "الطَّاعَةُ حِصْنٌ حَصِينٌ", "latin": "Aṭ-ṭā'atu ḥiṣnun ḥaṣīn", "meaning": "Ketaatan adalah benteng yang kokoh" },
+    { "id": 124, "arabic": "الْمَعْصِيَةُ تُورِثُ الذُّلَّ", "latin": "Al-ma'ṣiyatu tūrithudh dhull", "meaning": "Kemaksiyatan mewariskan kehinaan" }
+    
+  ]
+}

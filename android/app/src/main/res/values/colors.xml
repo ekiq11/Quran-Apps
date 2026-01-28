@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warna default Flutter -->
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="accent">#03DAC5</color>
+    
+    <!-- Warna untuk Bekal Muslim -->
+    <color name="green_500">#10B981</color>
+    <color name="green_600">#059669</color>
+    <color name="green_700">#047857</color>
+</resources>
