@@ -8,7 +8,6 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -18,20 +17,18 @@ plugins {
 android {
     namespace = "com.bekalsunnah.doa_harian"
 
-    // 🔴 WAJIB: ikut plugin (SDK tertinggi)
+    // ✅ FIXED: Compile dengan SDK tertinggi
     compileSdk = 36
 
     defaultConfig {
         applicationId = "com.bekalsunnah.doa_harian"
-
         minSdk = flutter.minSdkVersion
-
-        // 🟢 AMAN: tahan dulu di 34
+        
+        // ✅ CRITICAL FIX: Turunkan ke 34 untuk exact alarm yang lebih stabil
         targetSdk = 35
-
-        versionCode = 34
-        versionName = "5.0"
-
+        
+        versionCode = 41
+        versionName = "5.1"
         multiDexEnabled = true
 
         vectorDrawables {
@@ -54,7 +51,6 @@ android {
     }
 
     signingConfigs {
- 
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String?
             keyPassword = keystoreProperties["keyPassword"] as String?
@@ -80,7 +76,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-
 
     packaging {
         resources {
@@ -113,16 +108,18 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.browser:browser:1.9.0")
-    implementation("androidx.fragment:fragment-ktx:1.6.2")
-    implementation("androidx.work:work-runtime-ktx:2.8.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.browser:browser:1.8.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    
+    // ✅ CRITICAL: WorkManager untuk background scheduling yang reliable
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
-    implementation("com.google.android.material:material:1.11.0")
+    implementation("com.google.android.material:material:1.12.0")
 }
 
-// ⚠️ Jangan paksa versi lama
 configurations.all {
     resolutionStrategy {
         force("androidx.core:core:1.13.1")

@@ -32,7 +32,7 @@ class DashboardHeader extends StatefulWidget {
 
 class _DashboardHeaderState extends State<DashboardHeader>
   
-  with TickerProviderStateMixin {
+   with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   AnimationController? _shimmerController;
@@ -46,13 +46,14 @@ class _DashboardHeaderState extends State<DashboardHeader>
   static const double _cardBorderRadius = 24.0;
   late String _randomGreeting;
 final Random _random = Random();
-  Timer? _badgeRefreshTimer; // ✅ TAMBAHKAN INI
+
  // Tambahkan di bagian initState - UPDATE EXISTING CODE
 @override
 void initState() {
   super.initState();
-    // Generate random greeting saat pertama kali load
+  WidgetsBinding.instance.addObserver(this);
   _randomGreeting = _getRandomGreeting();
+  
   _pulseController = AnimationController(
     vsync: this,
     duration: Duration(milliseconds: 1500),
@@ -71,10 +72,9 @@ void initState() {
     CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOutSine),
   );
   
-  // ✅ BREATHING ANIMATION untuk icon Quran - UPDATED TIMING
   _quranBreathingController = AnimationController(
     vsync: this,
-    duration: Duration(milliseconds: 2500), // Lebih smooth
+    duration: Duration(milliseconds: 2500),
   )..repeat(reverse: true);
   
   _quranBreathingAnimation = Tween<double>(begin: 0.95, end: 1.08).animate(
@@ -83,15 +83,17 @@ void initState() {
       curve: Curves.easeInOut,
     ),
   );
-    // ✅ TAMBAHKAN INI - Auto refresh badge setiap 5 detik
-  _badgeRefreshTimer = Timer.periodic(Duration(seconds: 5), (_) {
-    if (mounted) {
-      NotificationService().updateBadgeCountManual();
-    }
-  });
-
+  
+  // ✅ CRITICAL FIX: Update badge SETELAH frame pertama
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    NotificationService().updateBadgeCountManual();
+    // ✅ Delay sedikit untuk memastikan SharedPreferences sudah ready
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (mounted) {
+        print('🔄 Dashboard: Force refreshing badge on init');
+        NotificationService().updateBadgeCountManual();
+      }
+    });
+    
     final provider = Provider.of<DashboardProvider>(context, listen: false);
     if (!provider.isLoadingLocation && provider.locationData == null) {
       provider.loadLocation();
@@ -123,25 +125,51 @@ void _refreshGreeting() {
     _randomGreeting = _getRandomGreeting();
   });
 }
+
   @override
   void dispose() {
     _pulseController.dispose();
     _shimmerController?.dispose();
     _quranBreathingController.dispose();
-      _badgeRefreshTimer?.cancel(); // ✅ TAMBAHKAN INI
+    WidgetsBinding.instance.removeObserver(this as WidgetsBindingObserver);
     super.dispose();
   }
-
+  // ✅ ADD LIFECYCLE CALLBACK
+  @override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  super.didChangeAppLifecycleState(state);
+  
+  if (state == AppLifecycleState.resumed) {
+    print('📱 App resumed - refreshing badge count');
+    
+    // ✅ CRITICAL: Delay untuk memastikan background process selesai
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        print('🔄 Dashboard: Force badge refresh after resume');
+        NotificationService().updateBadgeCountManual();
+      }
+    });
+  }
+}
   void _openNotificationCenter() {
   HapticFeedback.lightImpact();
+  
+  // ✅ Force refresh SEBELUM buka (untuk memastikan data terbaru)
+  NotificationService().updateBadgeCountManual();
+  
   Navigator.push(
     context,
     MaterialPageRoute(builder: (context) => const NotificationCenterPage()),
   ).then((_) {
-    NotificationService().updateBadgeCountManual(); // ✅ KEEP INI
+    // ✅ Force refresh SETELAH tutup
+    Future.delayed(Duration(milliseconds: 200), () {
+      if (mounted) {
+        print('🔄 Dashboard: Badge refresh after closing NotificationCenter');
+        NotificationService().updateBadgeCountManual();
+      }
+    });
   });
 }
-
   void _showMenuOptions() {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -1863,78 +1891,16 @@ Widget _buildTextContent({
     ],
   );
 }
-  Widget _buildPrayerTimeCard(bool isSmallScreen, bool isMediumScreen) {
-    return Consumer<DashboardProvider>(
-      builder: (context, provider, child) {
-        final prayerTimeModel = provider.prayerTimeModel;
-        final nextPrayerInfo = provider.nextPrayerInfo;
-        final isLoading = provider.isLoadingPrayerTimes;
+    Widget _buildPrayerTimeCard(bool isSmallScreen, bool isMediumScreen) {
+  return Consumer<DashboardProvider>(
+    builder: (context, provider, child) {
+      final prayerTimeModel = provider.prayerTimeModel;
+      final nextPrayerInfo = provider.nextPrayerInfo;
+      final isLoading = provider.isLoadingPrayerTimes;
 
-        if (isLoading) {
-          return Container(
-            height: isSmallScreen ? 80 : 90,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(_cardBorderRadius),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: SizedBox(
-                width: isSmallScreen ? 24 : 28,
-                height: isSmallScreen ? 24 : 28,
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
-                  strokeWidth: 3,
-                ),
-              ),
-            ),
-          );
-        }
-
-        if (prayerTimeModel == null || nextPrayerInfo == null) {
-          return Container(
-            padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(_cardBorderRadius),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red[400],
-                  size: isSmallScreen ? 20 : 24,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Gagal memuat waktu sholat',
-                    style: TextStyle(
-                      color: Color(0xFF424242),
-                      fontSize: isSmallScreen ? 12 : 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
+      if (isLoading) {
         return Container(
+          height: isSmallScreen ? 80 : 90,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(_cardBorderRadius),
@@ -1946,232 +1912,430 @@ Widget _buildTextContent({
               ),
             ],
           ),
-          child: Column(
+          child: Center(
+            child: SizedBox(
+              width: isSmallScreen ? 24 : 28,
+              height: isSmallScreen ? 24 : 28,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 3,
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (prayerTimeModel == null || nextPrayerInfo == null) {
+        return Container(
+          padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(_cardBorderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
             children: [
-              Container(
-                padding: EdgeInsets.fromLTRB(
-                  isSmallScreen ? 16 : 18,
-                  isSmallScreen ? 14 : 16,
-                  isSmallScreen ? 14 : 16,
-                  isSmallScreen ? 14 : 16,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(_cardBorderRadius),
-                    topRight: Radius.circular(_cardBorderRadius),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 8 : 9),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.access_time_filled,
-                        color: Colors.white,
-                        size: isSmallScreen ? 20 : 22,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Sholat Berikutnya',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.white.withOpacity(0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                         
-                          Text(
-                            nextPrayerInfo.name,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 18 : 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          nextPrayerInfo.timeString,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 22 : 24,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 6 : 8,
-                            vertical: isSmallScreen ? 3 : 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            nextPrayerInfo.remainingTime,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 10 : 11,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              Icon(
+                Icons.error_outline,
+                color: Colors.red[400],
+                size: isSmallScreen ? 20 : 24,
               ),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _isPrayerExpanded = !_isPrayerExpanded;
-                  });
-                },
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(_isPrayerExpanded ? 0 : _cardBorderRadius),
-                  bottomRight: Radius.circular(_isPrayerExpanded ? 0 : _cardBorderRadius),
-                ),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 14 : 16,
-                    vertical: isSmallScreen ? 10 : 12,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isPrayerExpanded ? 'Sembunyikan' : 'Lihat Jadwal Lengkap',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 12 : 13,
-                          color: AppColors.primaryDark,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        _isPrayerExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.primaryDark,
-                        size: isSmallScreen ? 16 : 18,
-                      ),
-                    ],
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Gagal memuat waktu sholat',
+                  style: TextStyle(
+                    color: Color(0xFF424242),
+                    fontSize: isSmallScreen ? 12 : 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-              AnimatedSize(
-                duration: Duration(milliseconds: 300),
-                child: _isPrayerExpanded
-                    ? Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 12 : 14,
-                          vertical: isSmallScreen ? 10 : 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(_cardBorderRadius),
-                            bottomRight: Radius.circular(_cardBorderRadius),
-                          ),
-                        ),
-                        child: Column(
-                          children: prayerTimeModel.times.entries
-                              .where((e) => e.key != 'Terbit')
-                              .map((entry) => _buildPrayerRow(
-                                    entry.key,
-                                    entry.value,
-                                    nextPrayerInfo.name,
-                                    isSmallScreen,
-                                    isMediumScreen,
-                                  ))
-                              .toList(),
-                        ),
-                      )
-                    : SizedBox.shrink(),
               ),
             ],
           ),
         );
-      },
-    );
-  }
-  Widget _buildPrayerRow(String name, TimeOfDay time, String nextPrayerName, bool isSmallScreen, bool isMediumScreen) {
-    final isNext = nextPrayerName == name;
-    final timeString = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 10),
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallScreen ? 12 : 14,
-        vertical: isSmallScreen ? 10 : 12,
-      ),
-      decoration: BoxDecoration(
-        color: isNext ? AppColors.primary.withOpacity(0.1) : Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: isNext ? Border.all(color: AppColors.primary, width: 1.5) : null,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: isSmallScreen ? 32 : 36,
-            height: isSmallScreen ? 32 : 36,
-            decoration: BoxDecoration(
-              color: isNext ? AppColors.primary : Colors.grey[300],
-              borderRadius: BorderRadius.circular(10),
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_cardBorderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: Offset(0, 4),
             ),
-            child: Icon(
-              _getPrayerIcon(name),
-              color: isNext ? Colors.white : Colors.grey[600],
-              size: isSmallScreen ? 16 : 18,
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              name,
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : (isMediumScreen ? 15 : 15),
-                fontWeight: isNext ? FontWeight.w600 : FontWeight.w500,
-                color: isNext ? AppColors.primaryDark : Color(0xFF424242),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 16 : 18,
+                isSmallScreen ? 14 : 16,
+                isSmallScreen ? 14 : 16,
+                isSmallScreen ? 14 : 16,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(_cardBorderRadius),
+                  topRight: Radius.circular(_cardBorderRadius),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 8 : 9),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.access_time_filled,
+                      color: Colors.white,
+                      size: isSmallScreen ? 20 : 22,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sholat Berikutnya',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 11 : 12,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                       
+                        Text(
+                          nextPrayerInfo.name,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 18 : 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        nextPrayerInfo.timeString,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 22 : 24,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 3 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          nextPrayerInfo.remainingTime,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 10 : 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _isPrayerExpanded = !_isPrayerExpanded;
+                });
+              },
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(_isPrayerExpanded ? 0 : _cardBorderRadius),
+                bottomRight: Radius.circular(_isPrayerExpanded ? 0 : _cardBorderRadius),
+              ),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 14 : 16,
+                  vertical: isSmallScreen ? 10 : 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _isPrayerExpanded ? 'Sembunyikan' : 'Lihat Jadwal Lengkap',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        color: AppColors.primaryDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(
+                      _isPrayerExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primaryDark,
+                      size: isSmallScreen ? 16 : 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: Duration(milliseconds: 300),
+              child: _isPrayerExpanded
+                  ? Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 12 : 14,
+                        vertical: isSmallScreen ? 10 : 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(_cardBorderRadius),
+                          bottomRight: Radius.circular(_cardBorderRadius),
+                        ),
+                      ),
+                      child: Column(
+                        children: _buildAllPrayerRows(
+                          prayerTimeModel.times,
+                          nextPrayerInfo.name,
+                          isSmallScreen,
+                          isMediumScreen,
+                        ),
+                      ),
+                    )
+                  : SizedBox.shrink(),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+// ✅ Build all prayer rows in proper order with visual grouping
+List<Widget> _buildAllPrayerRows(
+  Map<String, TimeOfDay> times,
+  String nextPrayerName,
+  bool isSmallScreen,
+  bool isMediumScreen,
+) {
+  final rows = <Widget>[];
+  
+  // Order of prayers to display
+  final orderedPrayers = [
+    'Imsak',
+    'Subuh',
+    'Syuruk',
+    'Duha',
+    'Dzuhur',
+    'Ashar',
+    'Maghrib',
+    'Isya',
+  ];
+  
+  // Special prayers (not for salah reminders)
+  final specialPrayers = {'Imsak', 'Syuruk', 'Duha'};
+  
+  for (int i = 0; i < orderedPrayers.length; i++) {
+    final prayerName = orderedPrayers[i];
+    final time = times[prayerName];
+    
+    if (time != null) {
+      // Add divider before Duha and Dzuhur for visual grouping
+      if (prayerName == 'Duha' || prayerName == 'Dzuhur') {
+        rows.add(Padding(
+          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 6),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: Colors.grey[200],
           ),
-          Text(
-            timeString,
-            style: TextStyle(
-              fontSize: isSmallScreen ? 16 : (isMediumScreen ? 17 : 17),
-              fontWeight: FontWeight.bold,
-              color: isNext ? AppColors.primaryDark : Color(0xFF424242),
-              letterSpacing: 0.5,
+        ));
+      }
+      
+      rows.add(_buildPrayerRow(
+        prayerName,
+        time,
+        nextPrayerName,
+        isSmallScreen,
+        isMediumScreen,
+        isSpecial: specialPrayers.contains(prayerName),
+      ));
+    }
+  }
+  
+  return rows;
+}
+
+Widget _buildPrayerRow(
+  String name,
+  TimeOfDay time,
+  String nextPrayerName,
+  bool isSmallScreen,
+  bool isMediumScreen, {
+  bool isSpecial = false,
+}) {
+  final isNext = name == nextPrayerName;
+  final timeString = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  
+  // Icons for different prayer times
+  IconData getIcon() {
+    switch (name) {
+      case 'Imsak':
+        return Icons.bedtime_outlined;
+      case 'Subuh':
+        return Icons.nights_stay_outlined;
+      case 'Syuruk':
+        return Icons.wb_sunny_outlined;
+      case 'Duha':
+        return Icons.wb_twilight;
+      case 'Dzuhur':
+        return Icons.sunny;
+      case 'Ashar':
+        return Icons.wb_cloudy_outlined;
+      case 'Maghrib':
+        return Icons.wb_twilight;
+      case 'Isya':
+        return Icons.nightlight_round;
+      default:
+        return Icons.access_time;
+    }
+  }
+  
+  // Label for special prayers
+  String? getLabel() {
+    switch (name) {
+      case 'Imsak':
+        return 'Batas Sahur';
+      case 'Syuruk':
+        return 'Terbit';
+      case 'Duha':
+        return 'Sholat Duha';
+      default:
+        return null;
+    }
+  }
+  
+  return Container(
+    margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+    padding: EdgeInsets.symmetric(
+      horizontal: isSmallScreen ? 10 : 12,
+      vertical: isSmallScreen ? 10 : 12,
+    ),
+    decoration: BoxDecoration(
+      color: isNext
+          ? AppColors.primary.withOpacity(0.08)
+          : (isSpecial ? Colors.amber[50] : Colors.grey[50]),
+      borderRadius: BorderRadius.circular(10),
+      border: isNext
+          ? Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5)
+          : null,
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(isSmallScreen ? 6 : 7),
+          decoration: BoxDecoration(
+            color: isNext
+                ? AppColors.primary.withOpacity(0.15)
+                : (isSpecial ? Colors.amber[100] : Colors.grey[200]),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            getIcon(),
+            size: isSmallScreen ? 16 : 18,
+            color: isNext
+                ? AppColors.primary
+                : (isSpecial ? Colors.amber[800] : Color(0xFF616161)),
+          ),
+        ),
+        SizedBox(width: isSmallScreen ? 10 : 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 13 : 14,
+                  fontWeight: isNext ? FontWeight.w700 : FontWeight.w600,
+                  color: isNext ? AppColors.primaryDark : Color(0xFF212121),
+                ),
+              ),
+              if (getLabel() != null) ...[
+                SizedBox(height: 2),
+                Text(
+                  getLabel()!,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 11,
+                    color: isSpecial ? Colors.amber[800] : Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Text(
+          timeString,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 15 : 16,
+            fontWeight: isNext ? FontWeight.w700 : FontWeight.w600,
+            color: isNext ? AppColors.primary : Color(0xFF424242),
+            letterSpacing: 0.5,
+          ),
+        ),
+        if (isNext) ...[
+          SizedBox(width: 8),
+          Container(
+            padding: EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.notifications_active,
+              size: isSmallScreen ? 12 : 14,
+              color: Colors.white,
             ),
           ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
+  
 
   Widget _buildMainMenu(bool isSmallScreen, bool isMediumScreen) {
     return Column(

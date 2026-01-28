@@ -106,6 +106,12 @@ flutter:
     - assets/quran-json/surah/list-surah.json
     - assets/json/mahfudzot.json
     - assets/adzan/adzan.mp3
+    # - assets/mushaf/halaman/
+    # - assets/mushaf/surah/surahs.json
+    # - assets/mushaf/QPC1/qpc-v1.json
+    # - assets/mushaf/QPC2/qpc-v2.json
+    # - assets/mushaf/QPC1/verse-mapping.json
+    # - assets/mushaf/QPC2/verse-mapping.json
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

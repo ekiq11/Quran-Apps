@@ -124,18 +124,23 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
   static const String _keyBadgeCount = 'notification_badge_count';
 
   @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    );
-    _loadNotifications();
-  }
+void initState() {
+  super.initState();
+  _fadeController = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: 500),
+  );
+  _fadeAnimation = CurvedAnimation(
+    parent: _fadeController,
+    curve: Curves.easeInOut,
+  );
+  
+  // ✅ CRITICAL: Force refresh badge SEBELUM load notifications
+  print('🔔 NotificationCenter: Opening - refreshing badge');
+  NotificationService().updateBadgeCountManual();
+  
+  _loadNotifications();
+}
 
   @override
   void dispose() {
@@ -222,6 +227,11 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
     
     setState(() => _isLoading = false);
     _fadeController.forward();
+      // ✅ CRITICAL: Update badge setelah data loaded
+  Future.delayed(Duration(milliseconds: 200), () {
+    print('🔄 NotificationCenter: Badge refresh after load complete');
+    _updateBadgeCount();
+  });
   }
 
   Future<void> _updateBadgeCount() async {
@@ -500,11 +510,11 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                         onRefresh: _loadNotifications,
                         color: AppColors.primary,
                         child: ListView.separated(
-                          padding: EdgeInsets.zero, // ✅ Hapus padding
-                          itemCount: _allNotifications.length,
-                          separatorBuilder: (_, __) => SizedBox.shrink(), // ✅ No separator
-                          itemBuilder: (context, index) => _buildNotificationCard(_allNotifications[index]),
-                        ),
+  padding: EdgeInsets.zero, // ✅ Sudah benar
+  itemCount: _allNotifications.length,
+  separatorBuilder: (_, __) => SizedBox.shrink(), // ✅ Sudah benar
+  itemBuilder: (context, index) => _buildNotificationCard(_allNotifications[index]),
+),
                       ),
                     ),
                   ),
@@ -654,7 +664,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: isScheduled
-                          ? [Color(0xFF3B82F6), Color(0xFF2563EB)]
+                          ? [Color(0xFF047857), Color(0xFF059669)]
                           : !notification.isRead
                               ? [notification.type.color, notification.type.color.withOpacity(0.85)]
                               : [Color(0xFF9CA3AF), Color(0xFF6B7280)], // ✅ Abu-abu untuk yang sudah dibaca
@@ -746,10 +756,10 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Color(0xFF3B82F6).withOpacity(0.08),
+                            color: Color(0xFF047857).withOpacity(0.08),
                             borderRadius: BorderRadius.circular(5),
                             border: Border.all(
-                              color: Color(0xFF3B82F6).withOpacity(0.2),
+                              color: Color(0xFF047857).withOpacity(0.2),
                               width: 0.5,
                             ),
                           ),
@@ -759,14 +769,14 @@ class _NotificationCenterPageState extends State<NotificationCenterPage>
                               Icon(
                                 Icons.schedule_rounded,
                                 size: 11,
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF047857),
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Terjadwal',
                                 style: TextStyle(
                                   fontSize: _getContentFontSize(context) - 2,
-                                  color: Color(0xFF3B82F6),
+                                  color: Color(0xFF047857),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

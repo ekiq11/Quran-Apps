@@ -1,14 +1,20 @@
-// main.dart - FIXED v7.0 - AUTO POPUP NOTIFICATION
-// ✅ Popup muncul otomatis saat notifikasi trigger
-// ✅ Tidak perlu tap notifikasi
-// ✅ Seperti WhatsApp call notification
+// main.dart - v12.0 - CLEAN START: Zero Permission Checks
+// ✅ ABSOLUTELY NO permission checks on startup
+// ✅ NO battery optimization checks at all
+// ✅ Show onboarding FIRST on first launch
+// ✅ ALL permissions requested ONLY in onboarding screen
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myquran/notification/notification_manager.dart';
 import 'package:myquran/notification/notification_prayer.dart';
+import 'package:myquran/notification/notification_service.dart';
+import 'package:myquran/permission__onboarding_screen.dart';
 import 'package:myquran/screens/widget/update_dialog.dart';
 import 'package:myquran/services/update.dart';
+import 'package:myquran/services/prayer_time_service.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:myquran/provider/dashboard_provider.dart';
 import 'package:myquran/screens/dashboard/islamic_dashboard.dart';
@@ -20,10 +26,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
    
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print('🚀 STARTING BEKAL MUSLIM APP v7.0');
-  print('   Features: Auto Popup Notifications');
+  print('🚀 STARTING BEKAL MUSLIM APP v12.0');
+  print('   Clean Start: ZERO permission checks');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
+  // ✅ Basic setup only - NO permissions, NO battery checks
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -33,58 +40,186 @@ void main() async {
   tz.initializeTimeZones();
   print('✅ Timezone initialized\n');
   
-  await _initializeNotifications();
+  // ✅ Setup notification handlers (but don't initialize yet)
   _setupNotificationHandlers();
   
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print('✅ APP INITIALIZATION COMPLETE');
+  print('✅ BASIC INITIALIZATION COMPLETE');
+  print('   Ready to show onboarding or dashboard');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   runApp(const MyApp());
 }
 
-Future<void> _initializeNotifications() async {
+// ✅ INITIALIZE NOTIFICATIONS - Called ONLY after onboarding
+Future<void> initializeNotificationsAfterOnboarding() async {
   try {
-    print('🔔 Initializing Notification System...');
+    print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🔔 Initializing Notification System (Post-Onboarding)...');
     
     final notificationManager = NotificationManager();
     final initialized = await notificationManager.initialize();
     
     if (initialized) {
       print('✅ Notification Manager Ready');
+      
+      // ✅ Schedule notifications IMMEDIATELY after init
+      await scheduleAllNotificationsIfNeeded();
     } else {
       print('⚠️ Notification Manager initialization failed');
     }
     
-    print('✅ Notification System Ready\n');
+    print('✅ Notification System Ready');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   } catch (e, stackTrace) {
     print('❌ Notification Init Failed: $e');
     print('Stack: $stackTrace');
   }
 }
 
+// ✅ SCHEDULE NOTIFICATIONS - PUBLIC (can be called from anywhere)
+Future<void> scheduleAllNotificationsIfNeeded() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final notifManager = NotificationManager();
+    
+    // Check if we have required permissions
+    final hasPerms = await notifManager.hasRequiredPermissions();
+    if (!hasPerms) {
+      print('⚠️ Missing permissions, cannot schedule notifications');
+      return;
+    }
+    
+    // ✅ Get ALL prayer times including Imsak, Syuruk, Duha
+    var prayerTimes = await _loadPrayerTimes(prefs);
+    
+    // ✅ CRITICAL: If no prayer times, calculate them NOW
+    if (prayerTimes.isEmpty) {
+      print('⚠️ No prayer times found, calculating now...');
+      try {
+        final prayerService = PrayerTimeService();
+        final model = await prayerService.calculatePrayerTimes(
+          forceRefresh: true,
+          autoSchedule: false, // Don't auto-schedule, we'll do it manually
+        );
+        prayerTimes = model.times;
+        print('✅ Prayer times calculated successfully!');
+      } catch (e) {
+        print('❌ Failed to calculate prayer times: $e');
+        return;
+      }
+    }
+    
+    print('📋 Prayer times loaded:');
+    prayerTimes.forEach((name, time) {
+      print('   $name: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
+    });
+    
+    // Get tilawah times
+    final tilawahTimes = {
+      'Pagi': TimeOfDay(
+        hour: prefs.getInt('tilawah_pagi_hour') ?? 6,
+        minute: prefs.getInt('tilawah_pagi_minute') ?? 0,
+      ),
+      'Siang': TimeOfDay(
+        hour: prefs.getInt('tilawah_siang_hour') ?? 13,
+        minute: prefs.getInt('tilawah_siang_minute') ?? 0,
+      ),
+      'Malam': TimeOfDay(
+        hour: prefs.getInt('tilawah_malam_hour') ?? 20,
+        minute: prefs.getInt('tilawah_malam_minute') ?? 0,
+      ),
+    };
+    
+    // Get doa times (based on prayer times)
+    final doaTimes = {
+      'Pagi': _addMinutes(prayerTimes['Subuh'] ?? const TimeOfDay(hour: 5, minute: 0), 15),
+      'Petang': _addMinutes(prayerTimes['Maghrib'] ?? const TimeOfDay(hour: 18, minute: 0), 10),
+    };
+    
+    print('📅 Scheduling all notifications...');
+    
+    await notifManager.scheduleAllNotifications(
+      prayerTimes: prayerTimes,
+      tilawahTimes: tilawahTimes,
+      doaTimes: doaTimes,
+    );
+    
+    // Save last schedule time
+    await prefs.setInt('last_notification_schedule', DateTime.now().millisecondsSinceEpoch);
+    
+    print('✅ All notifications scheduled successfully');
+    
+  } catch (e, stack) {
+    print('❌ Error scheduling notifications: $e');
+    print('Stack: $stack');
+  }
+}
+
+// ✅ Helper: Load prayer times from SharedPreferences
+Future<Map<String, TimeOfDay>> _loadPrayerTimes(SharedPreferences prefs) async {
+  final times = <String, TimeOfDay>{};
+  
+  final prayers = [
+    'Imsak',
+    'Subuh',
+    'Syuruk',
+    'Duha',
+    'Dzuhur',
+    'Ashar',
+    'Maghrib',
+    'Isya'
+  ];
+  
+  for (final prayer in prayers) {
+    final hourKey = 'prayer_${prayer.toLowerCase()}_hour';
+    final minuteKey = 'prayer_${prayer.toLowerCase()}_minute';
+    
+    final hour = prefs.getInt(hourKey);
+    final minute = prefs.getInt(minuteKey);
+    
+    if (hour != null && minute != null) {
+      times[prayer] = TimeOfDay(hour: hour, minute: minute);
+    }
+  }
+  
+  return times;
+}
+
+// Helper: Add minutes to TimeOfDay
+TimeOfDay _addMinutes(TimeOfDay time, int minutes) {
+  final totalMinutes = time.hour * 60 + time.minute + minutes;
+  return TimeOfDay(
+    hour: (totalMinutes ~/ 60) % 24,
+    minute: totalMinutes % 60,
+  );
+}
+
 // ✅ SETUP AUTO-POPUP HANDLERS
+// ✅ SETUP AUTO-POPUP HANDLERS + BADGE UPDATE
 void _setupNotificationHandlers() {
   print('🔧 Setting up auto-popup handlers...');
   
-  // ✅ NEW: Use context-aware callback for immediate popup
   NotificationManager.onNotificationTappedWithContext = (context, type, data) {
     print('📱 AUTO-POPUP TRIGGERED!');
     print('   Type: $type');
     print('   Context available: ${context != null}');
     
-    // ✅ Show popup IMMEDIATELY when notification fires
+    // ✅ Show popup immediately
     _showPopupImmediately(context, type, data);
+    
+    // ✅ CRITICAL: Update badge count setelah notification ditampilkan
+    // Ini memastikan badge sinkron dengan notification yang muncul
+    Future.delayed(Duration(milliseconds: 500), () {
+      NotificationService().updateBadgeCountManual();
+      print('   ✅ Badge count refreshed after popup shown');
+    });
   };
   
-  print('✅ Auto-popup handlers configured');
-  print('   Prayer → Adhan Dialog');
-  print('   Dzikir → Dzikir Popup');
-  print('   Tilawah → Tilawah Popup');
-  print('   Doa → Doa Popup\n');
+  print('✅ Auto-popup handlers configured with badge sync\n');
 }
 
-// ✅ SHOW POPUP IMMEDIATELY (No need to tap notification)
+// ✅ SHOW POPUP IMMEDIATELY
 void _showPopupImmediately(BuildContext context, String type, Map<String, dynamic> data) {
   print('🎯 Showing popup for: $type');
   
@@ -110,7 +245,8 @@ void _showPopupImmediately(BuildContext context, String type, Map<String, dynami
   }
 }
 
-// ✅ PRAYER POPUP - With Adzan Audio
+// ✅ PRAYER POPUP
+// ✅ PRAYER POPUP
 void _showPrayerPopup(BuildContext context, Map<String, dynamic> data) {
   final prayerName = data['name'] as String? ?? 'Sholat';
   final prayerTime = data['time'] as String? ?? '';
@@ -122,16 +258,21 @@ void _showPrayerPopup(BuildContext context, Map<String, dynamic> data) {
     prayerName: prayerName,
     prayerTime: prayerTime,
   );
+  
+  // ✅ Update badge setelah popup shown
+  Future.delayed(Duration(milliseconds: 300), () {
+    NotificationService().updateBadgeCountManual();
+  });
 }
 
-// ✅ DZIKIR POPUP - With Motivational Quote
+// ✅ DZIKIR POPUP
+// ✅ DZIKIR POPUP
 void _showDzikirPopup(BuildContext context, Map<String, dynamic> data) {
   final dzikirType = data['name'] as String? ?? 'Pagi';
   final title = data['title'] as String? ?? 'Waktu Dzikir';
   final body = data['body'] as String? ?? 'Saatnya berdzikir';
   
   print('📿 Showing dzikir popup for: $dzikirType');
-  print('   Quote: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
   
   showDialog(
     context: context,
@@ -139,20 +280,23 @@ void _showDzikirPopup(BuildContext context, Map<String, dynamic> data) {
     builder: (context) => _buildSimplePopup(
       context: context,
       icon: Icons.auto_stories_rounded,
-      color: Color(0xFF06B6D4),
+      color: const Color(0xFF06B6D4),
       title: title,
       body: body,
       actionText: 'Buka Dzikir',
       onAction: () {
         Navigator.pop(context);
-        // TODO: Navigate to dzikir page
         print('→ Navigate to dzikir page');
       },
     ),
-  );
+  ).then((_) {
+    // ✅ Update badge setelah dialog ditutup
+    NotificationService().updateBadgeCountManual();
+  });
 }
 
-// ✅ TILAWAH POPUP - With Motivational Quote + Last Read Info
+// ✅ TILAWAH POPUP
+// ✅ TILAWAH POPUP
 void _showTilawahPopup(BuildContext context, Map<String, dynamic> data) {
   final tilawahType = data['name'] as String? ?? 'Pagi';
   final title = data['title'] as String? ?? 'Waktunya Tilawah';
@@ -161,16 +305,12 @@ void _showTilawahPopup(BuildContext context, Map<String, dynamic> data) {
   final lastRead = data['lastRead'] as Map<String, dynamic>?;
   
   print('📖 Showing tilawah popup for: $tilawahType');
-  print('   Quote: ${motivationalQuote.substring(0, motivationalQuote.length > 50 ? 50 : motivationalQuote.length)}...');
   
-  // ✅ Display motivational quote + last read info
   String displayBody = body;
   
-  // If we have separate motivational quote, prioritize it
   if (motivationalQuote.isNotEmpty) {
     displayBody = motivationalQuote;
     
-    // Add last read info if available
     if (lastRead != null) {
       final surahName = lastRead['surahName'] as String? ?? '';
       final ayahNumber = lastRead['ayahNumber'] as int? ?? 0;
@@ -186,27 +326,29 @@ void _showTilawahPopup(BuildContext context, Map<String, dynamic> data) {
     builder: (context) => _buildSimplePopup(
       context: context,
       icon: Icons.menu_book_rounded,
-      color: Color(0xFF10B981),
+      color: const Color(0xFF10B981),
       title: title,
       body: displayBody,
       actionText: 'Buka Al-Qur\'an',
       onAction: () {
         Navigator.pop(context);
-        // TODO: Navigate to Quran page
         print('→ Navigate to Quran page');
       },
     ),
-  );
+  ).then((_) {
+    // ✅ Update badge setelah dialog ditutup
+    NotificationService().updateBadgeCountManual();
+  });
 }
 
-// ✅ DOA POPUP - With Motivational Quote
+// ✅ DOA POPUP
+// ✅ DOA POPUP
 void _showDoaPopup(BuildContext context, Map<String, dynamic> data) {
   final doaType = data['name'] as String? ?? 'Pagi';
   final title = data['title'] as String? ?? 'Waktu Berdoa';
   final body = data['body'] as String? ?? 'Mari berdoa kepada Allah';
   
   print('🤲 Showing doa popup for: $doaType');
-  print('   Quote: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
   
   showDialog(
     context: context,
@@ -214,7 +356,7 @@ void _showDoaPopup(BuildContext context, Map<String, dynamic> data) {
     builder: (context) => _buildSimplePopup(
       context: context,
       icon: Icons.volunteer_activism_rounded,
-      color: Color(0xFFA855F7),
+      color: const Color(0xFFA855F7),
       title: title,
       body: body,
       actionText: 'Aamiin',
@@ -223,10 +365,13 @@ void _showDoaPopup(BuildContext context, Map<String, dynamic> data) {
         print('→ Doa popup dismissed with Aamiin');
       },
     ),
-  );
+  ).then((_) {
+    // ✅ Update badge setelah dialog ditutup
+    NotificationService().updateBadgeCountManual();
+  });
 }
 
-// ✅ SIMPLE POPUP WIDGET (Reusable)
+// ✅ SIMPLE POPUP WIDGET
 Widget _buildSimplePopup({
   required BuildContext context,
   required IconData icon,
@@ -239,7 +384,7 @@ Widget _buildSimplePopup({
   return Dialog(
     backgroundColor: Colors.transparent,
     child: Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [color, color.withOpacity(0.85)],
@@ -252,7 +397,7 @@ Widget _buildSimplePopup({
             color: Colors.black.withOpacity(0.3),
             blurRadius: 30,
             spreadRadius: 5,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -260,33 +405,33 @@ Widget _buildSimplePopup({
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 64, color: Colors.white),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               body,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 color: Colors.white,
                 height: 1.5,
@@ -294,7 +439,7 @@ Widget _buildSimplePopup({
               textAlign: TextAlign.center,
             ),
           ),
-          SizedBox(height: 28),
+          const SizedBox(height: 28),
           Row(
             children: [
               Expanded(
@@ -302,13 +447,13 @@ Widget _buildSimplePopup({
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white, width: 2),
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: Colors.white, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Nanti',
                     style: TextStyle(
                       fontSize: 16,
@@ -317,7 +462,7 @@ Widget _buildSimplePopup({
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
@@ -325,7 +470,7 @@ Widget _buildSimplePopup({
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: color,
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 8,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -333,7 +478,7 @@ Widget _buildSimplePopup({
                   ),
                   child: Text(
                     actionText,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -358,7 +503,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
       ],
       child: MaterialApp(
-        navigatorKey: navigatorKey, // ✅ CRITICAL: Global navigator key
+        navigatorKey: navigatorKey,
         title: 'Bekal Muslim',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -399,7 +544,7 @@ class AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<AppInitializer> {
   final UpdateService _updateService = UpdateService();
-  bool _isCheckingUpdate = true;
+  bool _isInitializing = true;
   String _statusMessage = 'Memulai aplikasi...';
 
   @override
@@ -412,17 +557,127 @@ class _AppInitializerState extends State<AppInitializer> {
     try {
       await Future.delayed(const Duration(milliseconds: 1000));
       
-      if (mounted) {
-        setState(() => _statusMessage = 'Memeriksa pembaruan...');
+      // ✅ CEK apakah first launch TERLEBIH DAHULU
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+      
+      if (isFirstLaunch) {
+        // ✅ FIRST LAUNCH: Show onboarding IMMEDIATELY
+        // NO permission checks, NO battery checks, NO nothing!
+        print('\n🎉 FIRST LAUNCH DETECTED');
+        print('   → Showing onboarding screen immediately...\n');
+        
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Mempersiapkan pengalaman pertama...';
+          });
+        }
+        
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          // Navigate to onboarding
+          final permissionsGranted = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PermissionOnboardingScreen(),
+            ),
+          );
+          
+          if (permissionsGranted == true) {
+            // Mark first launch as complete
+            await prefs.setBool('is_first_launch', false);
+            
+            print('\n✅ ONBOARDING COMPLETED');
+            print('   → User granted permissions');
+            print('   → Initializing notifications...\n');
+            
+            // NOW initialize notifications (after onboarding)
+            if (mounted) {
+              setState(() => _statusMessage = 'Mengatur notifikasi...');
+            }
+            
+            await initializeNotificationsAfterOnboarding();
+            
+            // Calculate prayer times
+            if (mounted) {
+              setState(() => _statusMessage = 'Menghitung waktu sholat...');
+            }
+            
+            try {
+              final prayerService = PrayerTimeService();
+              await prayerService.calculatePrayerTimes(
+                forceRefresh: true,
+                autoSchedule: true,
+              );
+              print('✅ Prayer times calculated and scheduled\n');
+            } catch (e) {
+              print('⚠️ Error calculating prayer times: $e');
+            }
+          } else {
+            // User skipped or denied permissions
+            print('\n⚠️ ONBOARDING SKIPPED/DENIED');
+            print('   → User can grant permissions later in settings\n');
+            await prefs.setBool('is_first_launch', false);
+          }
+        }
+        
+      } else {
+        // ✅ RETURNING USER: Check for updates first
+        print('\n👋 RETURNING USER');
+        print('   → Checking for updates...\n');
+        
+        if (mounted) {
+          setState(() => _statusMessage = 'Memeriksa pembaruan...');
+        }
+        
+        await _checkForUpdates();
+        
+        // ✅ SILENTLY re-schedule notifications if permissions exist
+        // NO battery checks, NO permission requests
+        if (mounted) {
+          setState(() => _statusMessage = 'Memperbarui notifikasi...');
+        }
+        
+        final notifManager = NotificationManager();
+        final hasPerms = await notifManager.hasRequiredPermissions();
+        
+        if (hasPerms) {
+          print('   → User has permissions, re-scheduling notifications...');
+          await notifManager.initialize();
+          
+          final prayerService = PrayerTimeService();
+          final savedTimes = await prayerService.loadSavedPrayerTimes();
+          
+          if (savedTimes.isEmpty) {
+            print('   → No saved times, calculating...');
+            try {
+              await prayerService.calculatePrayerTimes(
+                forceRefresh: true,
+                autoSchedule: true,
+              );
+              print('   ✅ Prayer times calculated and scheduled\n');
+            } catch (e) {
+              print('   ❌ Error: $e');
+              await scheduleAllNotificationsIfNeeded();
+            }
+          } else {
+            print('   → Using saved times, re-scheduling...');
+            await scheduleAllNotificationsIfNeeded();
+            print('   ✅ Notifications re-scheduled\n');
+          }
+        } else {
+          print('   ⚠️ Missing permissions, notifications not scheduled');
+          print('   → User can grant permissions in settings\n');
+        }
       }
       
-      await _checkForUpdates();
-      
-    } catch (e) {
-      print('⚠️ Initialization error: $e');
+    } catch (e, stack) {
+      print('❌ Initialization error: $e');
+      print('Stack: $stack');
     } finally {
       if (mounted) {
-        setState(() => _isCheckingUpdate = false);
+        setState(() => _isInitializing = false);
       }
     }
   }
@@ -447,7 +702,7 @@ class _AppInitializerState extends State<AppInitializer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isCheckingUpdate) {
+    if (_isInitializing) {
       return _buildSplashScreen();
     }
     
@@ -539,7 +794,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'v7.0.0 - Auto Popup',
+                  'v12.0',
                   style: TextStyle(fontSize: 12, color: Colors.white),
                 ),
               ],
@@ -549,4 +804,5 @@ class _AppInitializerState extends State<AppInitializer> {
       ),
     );
   }
+  
 }
