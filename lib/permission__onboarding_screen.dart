@@ -5,7 +5,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:myquran/notification/notification_manager.dart';
 import 'package:myquran/services/baterai_optimizer_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 // ✅ Import main.dart untuk akses fungsi inisialisasi
@@ -139,21 +138,19 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
       _currentPermission = 'Memulai permintaan izin...';
     });
     
-    bool allGranted = true;
-    List<String> failedPermissions = [];
+    final List<String> failedPermissions = [];
     
     try {
       // 1️⃣ REQUEST NOTIFICATION PERMISSION
       _updateProgress(1, 'Meminta izin notifikasi...');
-      print('📱 [1/6] Requesting notification permission...');
+      debugPrint('📱 [1/6] Requesting notification permission...');
       
       final notificationStatus = await Permission.notification.request();
-      print('   Status: ${notificationStatus.toString()}');
+      debugPrint('   Status: ${notificationStatus.toString()}');
       
       if (!notificationStatus.isGranted) {
-        print('   ⚠️ Notification permission DENIED');
+        debugPrint('   ⚠️ Notification permission DENIED');
         failedPermissions.add('Notifikasi');
-        allGranted = false;
         
         // Show retry dialog
         final retry = await _showPermissionRetryDialog('Notifikasi', 
@@ -162,31 +159,30 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
         if (retry) {
           final retryStatus = await Permission.notification.request();
           if (retryStatus.isGranted) {
-            print('   ✅ Notification permission granted on retry');
+            debugPrint('   ✅ Notification permission granted on retry');
             failedPermissions.remove('Notifikasi');
-            allGranted = true;
           }
         }
       } else {
-        print('   ✅ Notification permission GRANTED');
+        debugPrint('   ✅ Notification permission GRANTED');
       }
       
       await Future.delayed(const Duration(milliseconds: 500));
       
       // 2️⃣ REQUEST LOCATION PERMISSION
       _updateProgress(2, 'Meminta izin lokasi...');
-      print('📍 [2/6] Requesting location permission...');
+      debugPrint('📍 [2/6] Requesting location permission...');
       
       var locationStatus = await Permission.location.status;
-      print('   Current status: ${locationStatus.toString()}');
+      debugPrint('   Current status: ${locationStatus.toString()}');
       
       if (!locationStatus.isGranted) {
         locationStatus = await Permission.location.request();
-        print('   After request: ${locationStatus.toString()}');
+        debugPrint('   After request: ${locationStatus.toString()}');
       }
       
       if (!locationStatus.isGranted) {
-        print('   ⚠️ Location permission DENIED');
+        debugPrint('   ⚠️ Location permission DENIED');
         // Location is optional but recommended
         final useWithoutLocation = await _showOptionalPermissionDialog(
           'Lokasi',
@@ -197,40 +193,40 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
         if (!useWithoutLocation) {
           final retryStatus = await Permission.location.request();
           if (retryStatus.isGranted) {
-            print('   ✅ Location permission granted on retry');
+            debugPrint('   ✅ Location permission granted on retry');
           }
         }
       } else {
-        print('   ✅ Location permission GRANTED');
+        debugPrint('   ✅ Location permission GRANTED');
       }
       
       await Future.delayed(const Duration(milliseconds: 500));
       
       // 3️⃣ REQUEST EXACT ALARM PERMISSION (Android 12+)
       _updateProgress(3, 'Meminta izin alarm tepat waktu...');
-      print('⏰ [3/6] Requesting exact alarm permission...');
+      debugPrint('⏰ [3/6] Requesting exact alarm permission...');
       
       try {
         final alarmStatus = await Permission.scheduleExactAlarm.status;
-        print('   Current status: ${alarmStatus.toString()}');
+        debugPrint('   Current status: ${alarmStatus.toString()}');
         
         if (!alarmStatus.isGranted) {
           final requestedStatus = await Permission.scheduleExactAlarm.request();
-          print('   After request: ${requestedStatus.toString()}');
+          debugPrint('   After request: ${requestedStatus.toString()}');
           
           if (requestedStatus.isGranted) {
-            print('   ✅ Exact alarm permission GRANTED');
+            debugPrint('   ✅ Exact alarm permission GRANTED');
           } else if (requestedStatus.isPermanentlyDenied) {
-            print('   ⚠️ Exact alarm permission PERMANENTLY DENIED');
+            debugPrint('   ⚠️ Exact alarm permission PERMANENTLY DENIED');
             await _showSettingsDialog('Alarm Tepat Waktu');
           } else {
-            print('   ⚠️ Exact alarm permission DENIED');
+            debugPrint('   ⚠️ Exact alarm permission DENIED');
           }
         } else {
-          print('   ✅ Exact alarm already granted');
+          debugPrint('   ✅ Exact alarm already granted');
         }
       } catch (e) {
-        print('   ⚠️ Exact alarm permission not available: $e');
+        debugPrint('   ⚠️ Exact alarm permission not available: $e');
       }
       
       await Future.delayed(const Duration(milliseconds: 500));
@@ -238,28 +234,28 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
       
       // 4️⃣ REQUEST BATTERY OPTIMIZATION EXEMPTION
       _updateProgress(4, 'Meminta pengecualian optimasi baterai...');
-      print('🔋 [4/6] Requesting battery optimization exemption...');
+      debugPrint('🔋 [4/6] Requesting battery optimization exemption...');
       
       try {
         final batteryOptDisabled = await BatteryOptimizationHelper.isBatteryOptimizationDisabled();
-        print('   Current status: ${batteryOptDisabled ? "Already disabled" : "Enabled"}');
+        debugPrint('   Current status: ${batteryOptDisabled ? "Already disabled" : "Enabled"}');
         
         if (!batteryOptDisabled) {
-          print('   🔋 Requesting battery optimization exemption...');
+          debugPrint('   🔋 Requesting battery optimization exemption...');
           
-          final granted = await BatteryOptimizationHelper.requestBatteryOptimizationExemption();
+          await BatteryOptimizationHelper.requestBatteryOptimizationExemption();
           
           // Wait a bit for system to process
           await Future.delayed(const Duration(milliseconds: 1000));
           
           // Verify the result
           final verified = await BatteryOptimizationHelper.isBatteryOptimizationDisabled();
-          print('   Verification result: $verified');
+          debugPrint('   Verification result: $verified');
           
           if (verified) {
-            print('   ✅ Battery optimization exemption GRANTED');
+            debugPrint('   ✅ Battery optimization exemption GRANTED');
           } else {
-            print('   ⚠️ Battery optimization exemption DENIED or PENDING');
+            debugPrint('   ⚠️ Battery optimization exemption DENIED or PENDING');
             
             // // Show explanation and retry option
             // final retry = await _showBatteryOptimizationDialog();
@@ -268,22 +264,22 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
             //   await Future.delayed(const Duration(milliseconds: 1000));
             //   final retryVerified = await BatteryOptimizationHelper.isBatteryOptimizationDisabled();
             //   if (retryVerified) {
-            //     print('   ✅ Battery optimization exemption granted on retry');
+            //     debugPrint('   ✅ Battery optimization exemption granted on retry');
             //   }
             // }
           }
         } else {
-          print('   ✅ Battery optimization already disabled');
+          debugPrint('   ✅ Battery optimization already disabled');
         }
       } catch (e) {
-        print('   ❌ Error requesting battery optimization: $e');
+        debugPrint('   ❌ Error requesting battery optimization: $e');
       }
       
       await Future.delayed(const Duration(milliseconds: 500));
       
       // 5️⃣ INITIALIZE NOTIFICATION SYSTEM
       _updateProgress(5, 'Menginisialisasi sistem notifikasi...');
-      print('🔔 [5/6] Initializing notification system...');
+      debugPrint('🔔 [5/6] Initializing notification system...');
       
       // ✅ Call the global initialization function
       await app_main.initializeNotificationsAfterOnboarding();
@@ -292,22 +288,22 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
       
       // 6️⃣ SETUP PERIODIC WORK (background scheduler)
       _updateProgress(6, 'Mengatur penjadwalan background...');
-      print('⚙️ [6/6] Setting up periodic work...');
+      debugPrint('⚙️ [6/6] Setting up periodic work...');
       
       try {
         // ✅ Call native Android method to setup WorkManager
         const platform = MethodChannel('com.bekalsunnah.doa_harian/battery');
         await platform.invokeMethod('setupPeriodicWork');
-        print('✅ Periodic work setup successful');
+        debugPrint('✅ Periodic work setup successful');
       } catch (e) {
-        print('⚠️ Error setting up periodic work: $e');
+        debugPrint('⚠️ Error setting up periodic work: $e');
       }
       
       await Future.delayed(const Duration(milliseconds: 500));
       
-      print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('✅ PERMISSION REQUEST COMPLETED');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('✅ PERMISSION REQUEST COMPLETED');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
       if (mounted) {
         if (failedPermissions.isEmpty) {
@@ -318,8 +314,8 @@ class _PermissionOnboardingScreenState extends State<PermissionOnboardingScreen>
       }
       
     } catch (e, stackTrace) {
-      print('❌ Error requesting permissions: $e');
-      print('Stack: $stackTrace');
+      debugPrint('❌ Error requesting permissions: $e');
+      debugPrint('Stack: $stackTrace');
       
       if (mounted) {
         _showErrorDialog(e.toString());

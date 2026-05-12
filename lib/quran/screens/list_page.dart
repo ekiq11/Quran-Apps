@@ -12,7 +12,12 @@ import 'package:myquran/screens/util/constants.dart';
 import 'dart:math' as math;
 
 class QuranListPage extends StatefulWidget {
-  const QuranListPage({Key? key}) : super(key: key);
+  final bool autoOpenLastRead;
+
+  const QuranListPage({
+    Key? key,
+    this.autoOpenLastRead = false,
+  }) : super(key: key);
 
   @override
   State<QuranListPage> createState() => _QuranListPageState();
@@ -36,7 +41,23 @@ class _QuranListPageState extends State<QuranListPage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData().then((_) {
+      if (widget.autoOpenLastRead && _lastRead != null && mounted) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => QuranReadPage(
+                  surahNumber: _lastRead!.surahNumber,
+                  initialAyah: _lastRead!.ayahNumber,
+                ),
+              ),
+            ).then((_) => _loadData());
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -92,13 +113,18 @@ class _QuranListPageState extends State<QuranListPage> {
         return;
       }
       
-      // ✅ PRIORITAS 3: Pencarian nama surah
+      // ✅ PRIORITAS 3: Pencarian nama surah (Lebih Toleran/Fuzzy)
+      // Menghapus spasi, tanda hubung, dan tanda kutip (contoh: al-baqarah -> albaqarah)
+      final normalizedQuery = searchLower.replaceAll(RegExp(r"['\-\s]"), "");
+      
       result = _surahList.where((surah) {
         final nameLatin = surah.nameLatin.toLowerCase();
+        final normalizedName = nameLatin.replaceAll(RegExp(r"['\-\s]"), "");
         final nameArabic = surah.name.toLowerCase();
         final number = surah.number;
         
-        return nameLatin.contains(searchLower) || 
+        return normalizedName.contains(normalizedQuery) || 
+               nameLatin.contains(searchLower) ||
                nameArabic.contains(searchLower) ||
                number.contains(searchLower);
       }).toList();
@@ -1286,10 +1312,10 @@ Widget _buildSearchBar(bool isTablet) {
       controller: _searchController,
       onChanged: _filterSurah,
       decoration: InputDecoration(
-        hintText: 'Cari surah...',
+        hintText: 'Cari nama, surah ke-36, atau juz 30...',
         hintStyle: TextStyle(
           color: Colors.grey[400],
-          fontSize: isTablet ? 16 : 14,
+          fontSize: isTablet ? 15 : 14,
         ),
         prefixIcon: Icon(
           Icons.search,

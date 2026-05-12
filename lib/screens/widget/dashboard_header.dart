@@ -22,8 +22,11 @@ import '../../quran/screens/quran_main.dart';
 import '../../quran/screens/read_page.dart';
 
 class DashboardHeader extends StatefulWidget {
+  final ScrollController? scrollController;
+
   const DashboardHeader({
     Key? key,
+    this.scrollController,
   }) : super(key: key);
 
   @override
@@ -44,8 +47,36 @@ class _DashboardHeaderState extends State<DashboardHeader>
   static const double _horizontalPadding = 16.0;
   static const double _verticalSpacing = 16.0;
   static const double _cardBorderRadius = 24.0;
+  static const List<String> _morningGreetings = [
+    'Selamat Pagi',
+    'Semangat Pagi',
+    'Pagi Penuh Berkah',
+    'Awali dengan Bismillah',
+  ];
+
+  static const List<String> _afternoonGreetings = [
+    'Selamat Siang',
+    'Tetap Semangat',
+    'Waktunya Istirahat',
+    'Semoga Harimu Lancar',
+  ];
+
+  static const List<String> _eveningGreetings = [
+    'Selamat Sore',
+    'Alhamdulillah Hari Ini',
+    'Sore Penuh Damai',
+    'Istirahat Sejenak',
+  ];
+
+  static const List<String> _nightGreetings = [
+    'Selamat Malam',
+    'Waktunya Beristirahat',
+    'Tutup Hari dengan Doa',
+    'Malam yang Tenang',
+  ];
+
   late String _randomGreeting;
-final Random _random = Random();
+  final Random _random = Random();
 
  // Tambahkan di bagian initState - UPDATE EXISTING CODE
 @override
@@ -197,7 +228,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
               leading: Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(Icons.settings_rounded, color: Colors.blue, size: 22),
@@ -215,7 +246,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
               leading: Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(Icons.refresh_rounded, color: Colors.green, size: 22),
@@ -504,7 +535,6 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
         child: AnimatedBuilder(
           animation: _shimmerAnimation ?? AlwaysStoppedAnimation(0.0),
           builder: (context, child) {
-            final animValue = _shimmerAnimation?.value ?? 0.0;
             return Container(
               height: isSmallScreen ? 140 : 160,
               decoration: BoxDecoration(
@@ -517,7 +547,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                 borderRadius: BorderRadius.circular(_cardBorderRadius),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFF059669).withOpacity(0.3),
+                    color: Color(0xFF059669).withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: Offset(0, 10),
                     spreadRadius: 2,
@@ -525,103 +555,96 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                 ],
               ),
               child: Stack(
-                clipBehavior: Clip.hardEdge, // ✅ TAMBAHKAN INI
+                clipBehavior: Clip.hardEdge,
                 children: [
-                  // Shimmer effect
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(_cardBorderRadius),
-                      child: Transform.translate(
-                        offset: Offset(animValue * 200, 0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.0),
-                                Colors.white.withOpacity(0.1),
-                                Colors.white.withOpacity(0.0),
-                              ],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
+                  // Background Parallax Layer
+                  AnimatedBuilder(
+                    animation: widget.scrollController ?? AlwaysStoppedAnimation(0.0),
+                    builder: (context, child) {
+                      double offset = 0;
+                      if (widget.scrollController != null && widget.scrollController!.hasClients) {
+                        offset = widget.scrollController!.offset * 0.4;
+                      }
+                      return Transform.translate(
+                        offset: Offset(0, offset),
+                        child: Stack(
+                          children: [
+                            // Modern Islamic Pattern - Top Right
+                            Positioned(
+                              top: -20,
+                              right: -20,
+                              child: Container(
+                                width: 90,
+                                height: 90,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.white.withValues(alpha: 0.1),
+                                      Colors.white.withValues(alpha: 0.03),
+                                      Colors.transparent,
+                                    ],
+                                    stops: [0.0, 0.6, 1.0],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.star_outline_rounded,
+                                    size: 45,
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Modern Islamic Pattern - Top Right
-                  Positioned(
-                    top: -20,
-                    right: -20,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.03),
-                            Colors.transparent,
+
+                            // Modern Islamic Pattern - Bottom Left  
+                            Positioned(
+                              bottom: -15,
+                              left: -15,
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 75,
+                                    height: 75,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withValues(alpha: 0.05),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.1),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 20,
+                                    top: 20,
+                                    child: Container(
+                                      width: 35,
+                                      height: 35,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withValues(alpha: 0.08),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Additional accent - subtle geometric lines
+                            Positioned(
+                              right: 30,
+                              bottom: 30,
+                              child: CustomPaint(
+                                size: Size(40, 40),
+                                painter: IslamicGeometricPainter(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
+                              ),
+                            ),
                           ],
-                          stops: [0.0, 0.6, 1.0],
                         ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.star_outline_rounded,
-                          size: 45,
-                          color: Colors.white.withOpacity(0.15),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Modern Islamic Pattern - Bottom Left  
-                  Positioned(
-                    bottom: -15,
-                    left: -15,
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 75,
-                          height: 75,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.05),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 20,
-                          top: 20,
-                          child: Container(
-                            width: 35,
-                            height: 35,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.08),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Additional accent - subtle geometric lines
-                  Positioned(
-                    right: 30,
-                    bottom: 30,
-                    child: CustomPaint(
-                      size: Size(40, 40),
-                      painter: IslamicGeometricPainter(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -629,7 +652,6 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
           },
         ),
       ),
-      
       // Content layer
       Container(
         height: isSmallScreen ? 140 : 160,
@@ -646,12 +668,12 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                       Container(
                         padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: Offset(0, 2),
                             ),
@@ -670,9 +692,9 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                           vertical: isSmallScreen ? 6 : 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
                         ),
                         child: Text(
                           'Selamat ${_getGreetingTime()}',
@@ -723,7 +745,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                 letterSpacing: 0.5,
                 shadows: [
                   Shadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     offset: Offset(0, 3),
                     blurRadius: 8,
                   ),
@@ -735,7 +757,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
               _randomGreeting,
               style: TextStyle(
                 fontSize: isSmallScreen ? 13.0 : 14.5,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.3,
               ),
@@ -783,7 +805,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
                         border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFFEF4444).withOpacity(0.6),
+                            color: Color(0xFFEF4444).withValues(alpha: 0.6),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -825,7 +847,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
         border: Border.all(color: Color(0xFFE5E7EB), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -859,7 +881,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
         Container(
           padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
           decoration: BoxDecoration(
-            color: Color(0xFFD4AF37).withOpacity(0.15),
+            color: Color(0xFFD4AF37).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -934,7 +956,7 @@ void _showHijriCalendar(BuildContext context) {
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
-                   color: Color(0xFF059669).withOpacity(0.15),
+                   color: Color(0xFF059669).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: SizedBox(
@@ -984,7 +1006,7 @@ void _showHijriCalendar(BuildContext context) {
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: Color(0xFF6B7280).withOpacity(0.15),
+                  color: Color(0xFF6B7280).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1033,7 +1055,7 @@ void _showHijriCalendar(BuildContext context) {
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: Color(0xFF6B7280).withOpacity(0.15),
+                  color: Color(0xFF6B7280).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1116,7 +1138,7 @@ void _showHijriCalendar(BuildContext context) {
               Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Color(0xFF6B7280).withOpacity(0.15),
+                  color: Color(0xFF6B7280).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1214,9 +1236,9 @@ void _showHijriCalendar(BuildContext context) {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFFE5E7EB).withOpacity(0.0),
+            Color(0xFFE5E7EB).withValues(alpha: 0.0),
             Color(0xFFE5E7EB),
-            Color(0xFFE5E7EB).withOpacity(0.0),
+            Color(0xFFE5E7EB).withValues(alpha: 0.0),
           ],
         ),
       ),
@@ -1234,7 +1256,7 @@ void _showHijriCalendar(BuildContext context) {
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: Color(0xFF3B82F6).withOpacity(0.15),
+                  color: Color(0xFF3B82F6).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: SizedBox(
@@ -1284,7 +1306,7 @@ void _showHijriCalendar(BuildContext context) {
                 Container(
                   padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                   decoration: BoxDecoration(
-                    color: Color(0xFFF59E0B).withOpacity(0.15),
+                    color: Color(0xFFF59E0B).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -1344,8 +1366,8 @@ void _showHijriCalendar(BuildContext context) {
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
                   color: locationData.isFallback
-                      ? Color(0xFFF59E0B).withOpacity(0.15)
-                      : Color(0xFF059669).withOpacity(0.15),
+                      ? Color(0xFFF59E0B).withValues(alpha: 0.15)
+                      : Color(0xFF059669).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1427,7 +1449,7 @@ Widget _buildLoadingCard(bool isSmallScreen, bool isMediumScreen) {
       border: Border.all(color: Color(0xFFE5E7EB), width: 1),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.06),
+          color: Colors.black.withValues(alpha: 0.06),
           blurRadius: 12,
           offset: Offset(0, 4),
         ),
@@ -1503,14 +1525,14 @@ Widget _buildLastReadContent({
       color: Colors.white,
       borderRadius: BorderRadius.circular(_cardBorderRadius),
       border: Border.all(
-        color: isOverdue ? Color(0xFFEF4444).withOpacity(0.3) : Color(0xFFE5E7EB),
+        color: isOverdue ? Color(0xFFEF4444).withValues(alpha: 0.3) : Color(0xFFE5E7EB),
         width: isOverdue ? 1.5 : 1,
       ),
       boxShadow: [
         BoxShadow(
           color: isOverdue 
-            ? Color(0xFFEF4444).withOpacity(0.15)
-            : Colors.black.withOpacity(0.06),
+            ? Color(0xFFEF4444).withValues(alpha: 0.15)
+            : Colors.black.withValues(alpha: 0.06),
           blurRadius: isOverdue ? 16 : 12,
           offset: Offset(0, isOverdue ? 6 : 4),
           spreadRadius: isOverdue ? 1 : 0,
@@ -1591,11 +1613,11 @@ Widget _buildIslamicPattern(bool isOverdue) {
                 end: Alignment.bottomRight,
                 colors: isOverdue
                     ? [
-                        Color(0xFFEF4444).withOpacity(0.03),
+                        Color(0xFFEF4444).withValues(alpha: 0.03),
                         Color(0xFFFEF2F2),
                       ]
                     : [
-                        AppColors.primary.withOpacity(0.02),
+                        AppColors.primary.withValues(alpha: 0.02),
                         Colors.white,
                       ],
               ),
@@ -1626,8 +1648,8 @@ Widget _buildIslamicPattern(bool isOverdue) {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isOverdue 
-                  ? Color(0xFFEF4444).withOpacity(0.05)
-                  : AppColors.primary.withOpacity(0.05),
+                  ? Color(0xFFEF4444).withValues(alpha: 0.05)
+                  : AppColors.primary.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -1666,14 +1688,14 @@ Widget _buildAnimatedQuranIcon({
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: gradient[0].withOpacity(0.4),
+                    color: gradient[0].withValues(alpha: 0.4),
                     blurRadius: 16,
                     offset: Offset(0, 6),
                     spreadRadius: isOverdue ? 2 : 0,
                   ),
                   // Inner glow effect
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: Offset(-2, -2),
                   ),
@@ -1686,7 +1708,7 @@ Widget _buildAnimatedQuranIcon({
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -1723,9 +1745,9 @@ Widget _buildAnimatedQuranIcon({
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Colors.white.withOpacity(0.0),
-                                Colors.white.withOpacity(0.15),
-                                Colors.white.withOpacity(0.0),
+                                Colors.white.withValues(alpha: 0.0),
+                                Colors.white.withValues(alpha: 0.15),
+                                Colors.white.withValues(alpha: 0.0),
                               ],
                               stops: [
                                 0.0,
@@ -1762,7 +1784,7 @@ Widget _buildAnimatedQuranIcon({
                       border: Border.all(color: Colors.white, width: 2.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFFF59E0B).withOpacity(0.6),
+                          color: Color(0xFFF59E0B).withValues(alpha: 0.6),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
@@ -1832,7 +1854,7 @@ Widget _buildTextContent({
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFEF4444).withOpacity(0.3),
+                    color: Color(0xFFEF4444).withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: Offset(0, 2),
                   ),
@@ -1862,7 +1884,7 @@ Widget _buildTextContent({
         style: TextStyle(
           fontSize: isSmallScreen ? 12 : (isMediumScreen ? 13 : 14),
           color: isOverdue && lastRead != null 
-              ? Color(0xFFEF4444).withOpacity(0.8)
+              ? Color(0xFFEF4444).withValues(alpha: 0.8)
               : Color(0xFF6B7280),
           height: 1.3,
           fontWeight: isOverdue && lastRead != null 
@@ -1906,7 +1928,7 @@ Widget _buildTextContent({
             borderRadius: BorderRadius.circular(_cardBorderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -1933,7 +1955,7 @@ Widget _buildTextContent({
             borderRadius: BorderRadius.circular(_cardBorderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -1968,7 +1990,7 @@ Widget _buildTextContent({
           borderRadius: BorderRadius.circular(_cardBorderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: Offset(0, 4),
             ),
@@ -1999,7 +2021,7 @@ Widget _buildTextContent({
                   Container(
                     padding: EdgeInsets.all(isSmallScreen ? 8 : 9),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -2017,7 +2039,7 @@ Widget _buildTextContent({
                           'Sholat Berikutnya',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 11 : 12,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -2055,7 +2077,7 @@ Widget _buildTextContent({
                           vertical: isSmallScreen ? 3 : 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -2263,7 +2285,7 @@ Widget _buildPrayerRow(
   // ✅ Background color logic
   Color getBackgroundColor() {
     if (isNext) {
-      return AppColors.primary.withOpacity(0.08); // Green for next prayer
+      return AppColors.primary.withValues(alpha: 0.08); // Green for next prayer
     }
     if (isSunnah) {
       return Colors.purple[50]!; // Purple for sunnah (Tahajud, Duha)
@@ -2291,7 +2313,7 @@ Widget _buildPrayerRow(
   // ✅ Icon background color logic
   Color getIconBackgroundColor() {
     if (isNext) {
-      return AppColors.primary.withOpacity(0.15);
+      return AppColors.primary.withValues(alpha: 0.15);
     }
     if (isSunnah) {
       return Colors.purple[100]!;
@@ -2312,7 +2334,7 @@ Widget _buildPrayerRow(
       color: getBackgroundColor(),
       borderRadius: BorderRadius.circular(10),
       border: isNext
-          ? Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5)
+          ? Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5)
           : null,
     ),
     child: Row(
@@ -2455,7 +2477,9 @@ Widget _buildPrayerRow(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => QuranMainPage()),
+              MaterialPageRoute(
+                builder: (context) => QuranMainPage(autoOpenLastRead: true),
+              ),
             );
           },
           isSmallScreen: isSmallScreen,
@@ -2519,7 +2543,7 @@ Widget _buildPrayerRow(
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: gradient[0].withOpacity(0.3),
+            color: gradient[0].withValues(alpha: 0.3),
             blurRadius: 20,
             offset: Offset(0, 10),
             spreadRadius: 2,
@@ -2551,7 +2575,7 @@ Widget _buildPrayerRow(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                           width: 2,
                         ),
                       ),
@@ -2565,7 +2589,7 @@ Widget _buildPrayerRow(
                         height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.06),
+                          color: Colors.white.withValues(alpha: 0.06),
                         ),
                       ),
                     ),
@@ -2575,7 +2599,7 @@ Widget _buildPrayerRow(
                       top: 30,
                       child: Icon(
                         Icons.star_rounded,
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         size: 40,
                       ),
                     ),
@@ -2597,8 +2621,8 @@ Widget _buildPrayerRow(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            Colors.white.withOpacity(0.08),
-                            Colors.white.withOpacity(0.02),
+                            Colors.white.withValues(alpha: 0.08),
+                            Colors.white.withValues(alpha: 0.02),
                           ],
                         ),
                       ),
@@ -2609,7 +2633,7 @@ Widget _buildPrayerRow(
                       top: 15,
                       child: Icon(
                         Icons.brightness_3_rounded,
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withValues(alpha: 0.12),
                         size: 50,
                       ),
                     ),
@@ -2632,7 +2656,7 @@ Widget _buildPrayerRow(
                           margin: EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                       ),
@@ -2647,7 +2671,7 @@ Widget _buildPrayerRow(
                           margin: EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                           ),
                         ),
                       ),
@@ -2712,7 +2736,7 @@ Widget _buildPrayerRow(
             letterSpacing: 0.5,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 offset: Offset(0, 2),
                 blurRadius: 4,
               ),
@@ -2726,7 +2750,7 @@ Widget _buildPrayerRow(
           subtitle,
           style: TextStyle(
             fontSize: isSmallScreen ? 12 : (isMediumScreen ? 13 : 14),
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             fontWeight: FontWeight.w500,
             letterSpacing: 0.2,
             height: 1.3,
@@ -2745,15 +2769,15 @@ Widget _buildPrayerRow(
         vertical: isSmallScreen ? 6 : 8,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.25),
+        color: Colors.white.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -2789,15 +2813,15 @@ Widget _buildPrayerRow(
       width: iconSize.toDouble(),
       height: iconSize.toDouble(),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -2813,7 +2837,7 @@ Widget _buildPrayerRow(
                   return Center(
                     child: Icon(
                       Icons.image_not_supported,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       size: isSmallScreen ? 32 : 36,
                     ),
                   );
@@ -2829,50 +2853,4 @@ Widget _buildPrayerRow(
             ),
     );
   }
- 
-  // ✅ SHOW TILAWAH REMINDER dengan Last Read Info
-// ✅ COLLECTION GREETING MESSAGES - Bisa disesuaikan/ditambah
-static const List<String> _morningGreetings = [
-  'Semoga pagi Anda penuh berkah',
-  'Awali hari dengan penuh semangat',
-  'Semoga hari ini penuh kebaikan',
-  'Pagi yang indah untuk beribadah',
-  'Raih keberkahan di pagi hari',
-  'Mulai hari dengan bismillah',
-  'Semoga dipermudah segala urusan',
-  'Pagi cerah penuh harapan',
-];
-
-static const List<String> _afternoonGreetings = [
-  'Semoga siang Anda produktif',
-  'Tetap semangat di siang hari',
-  'Luangkan waktu untuk sholat',
-  'Jaga ibadah di tengah kesibukan',
-  'Semoga dimudahkan segala urusan',
-  'Siang yang penuh berkah',
-  'Istirahat sejenak untuk dzikir',
-  'Jangan lupa istirahat sejenak',
-];
-
-static const List<String> _eveningGreetings = [
-  'Semoga sore Anda menyenangkan',
-  'Nikmati ketenangan sore hari',
-  'Persiapkan ibadah maghrib',
-  'Tutup hari dengan penuh syukur',
-  'Semoga sore penuh kedamaian',
-  'Waktunya refleksi diri',
-  'Akhiri hari dengan amal baik',
-  'Sore yang penuh keberkahan',
-];
-
-static const List<String> _nightGreetings = [
-  'Semoga malam penuh ketenangan',
-  'Istirahat yang cukup yaa',
-  'Jangan lupa sholat isya',
-  'Malam untuk mendekatkan diri',
-  'Semoga bermimpi indah',
-  'Tutup hari dengan dzikir',
-  'Malam yang penuh berkah',
-  'Istirahat dengan hati tenang',
-];
 }

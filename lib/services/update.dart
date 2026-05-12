@@ -1,4 +1,6 @@
 // lib/services/update.dart
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:in_app_update/in_app_update.dart';
 
 class UpdateInfo {
@@ -16,20 +18,23 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  /// Cek update dari Play Store
+  /// Cek update dari Play Store — hanya Android
   Future<UpdateInfo?> checkForUpdate() async {
+    // ✅ FIX: in_app_update hanya support Android
+    if (!Platform.isAndroid) {
+      debugPrint('ℹ️ In-app update only available on Android, skipping...');
+      return null;
+    }
+
     try {
-      print('🔍 Checking for Play Store updates...');
-      
-      // Cek apakah ada update tersedia
+      debugPrint('🔍 Checking for Play Store updates...');
+
       final updateInfo = await InAppUpdate.checkForUpdate();
-      
+
       if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
-        print('✅ Update available!');
-        print('   Available version code: ${updateInfo.availableVersionCode}');
-        print('   Immediate update allowed: ${updateInfo.immediateUpdateAllowed}');
-        print('   Flexible update allowed: ${updateInfo.flexibleUpdateAllowed}');
-        
+        debugPrint('✅ Update available!');
+        debugPrint('   Available version code: ${updateInfo.availableVersionCode}');
+
         return UpdateInfo(
           version: updateInfo.availableVersionCode?.toString() ?? 'Unknown',
           mandatory: updateInfo.immediateUpdateAllowed,
@@ -37,12 +42,11 @@ class UpdateService {
           availableVersionCode: updateInfo.availableVersionCode ?? 0,
         );
       } else {
-        print('✅ App is up to date');
+        debugPrint('✅ App is up to date');
         return null;
       }
-      
     } catch (e) {
-      print('❌ Error checking for updates: $e');
+      debugPrint('❌ Error checking for updates: $e');
       return null;
     }
   }
@@ -50,12 +54,12 @@ class UpdateService {
   /// Perform immediate update (mandatory)
   Future<AppUpdateResult> performImmediateUpdate() async {
     try {
-      print('🔄 Starting immediate update...');
+      debugPrint('🔄 Starting immediate update...');
       final result = await InAppUpdate.performImmediateUpdate();
-      print('✅ Immediate update result: $result');
+      debugPrint('✅ Immediate update result: $result');
       return result;
     } catch (e) {
-      print('❌ Immediate update failed: $e');
+      debugPrint('❌ Immediate update failed: $e');
       return AppUpdateResult.inAppUpdateFailed;
     }
   }
@@ -63,12 +67,12 @@ class UpdateService {
   /// Start flexible update (optional)
   Future<AppUpdateResult> startFlexibleUpdate() async {
     try {
-      print('🔄 Starting flexible update...');
+      debugPrint('🔄 Starting flexible update...');
       final result = await InAppUpdate.startFlexibleUpdate();
-      print('✅ Flexible update started: $result');
+      debugPrint('✅ Flexible update started: $result');
       return result;
     } catch (e) {
-      print('❌ Flexible update failed: $e');
+      debugPrint('❌ Flexible update failed: $e');
       return AppUpdateResult.inAppUpdateFailed;
     }
   }
@@ -76,12 +80,12 @@ class UpdateService {
   /// Complete flexible update
   Future<void> completeFlexibleUpdate() async {
     try {
-      print('🔄 Completing flexible update...');
+      debugPrint('🔄 Completing flexible update...');
       await InAppUpdate.completeFlexibleUpdate();
-      print('✅ Flexible update completed');
+      debugPrint('✅ Flexible update completed');
     } catch (e) {
-      print('❌ Complete flexible update failed: $e');
+      debugPrint('❌ Complete flexible update failed: $e');
       rethrow;
     }
   }
-}
+}

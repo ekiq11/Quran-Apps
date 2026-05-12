@@ -27,7 +27,7 @@ android {
         // ✅ CRITICAL FIX: Turunkan ke 34 untuk exact alarm yang lebih stabil
         targetSdk = 35
         
-        versionCode = 41
+        versionCode = 43
         versionName = "5.1"
         multiDexEnabled = true
 
@@ -61,8 +61,9 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // ✅ FIXED: Aktifkan minify + shrink untuk memperkecil APK & obfuskasi kode
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

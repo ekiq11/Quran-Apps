@@ -16,6 +16,8 @@ import '../services/prayer_time_service.dart';
 import '../services/location_service.dart';
 import '../quran/service/quran_service.dart';
 import '../quran/model/surah_model.dart';
+import '../services/widget_service.dart';
+import 'package:hijri/hijri_calendar.dart';
 
 class DashboardProvider extends ChangeNotifier {
   final PrayerTimeService _prayerTimeService = PrayerTimeService();
@@ -71,7 +73,7 @@ class DashboardProvider extends ChangeNotifier {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   
   Future<void> initialize() async {
-    print('🚀 Initializing Dashboard...');
+    debugPrint('🚀 Initializing Dashboard...');
     
     await _initializeDateFormatting();
     _startClock();
@@ -87,14 +89,14 @@ class DashboardProvider extends ChangeNotifier {
     await loadPrayerTimes();
     await loadLastRead();
     
-    print('✅ Dashboard initialized');
+    debugPrint('✅ Dashboard initialized');
   }
 
   Future<void> _initializeDateFormatting() async {
     try {
       await initializeDateFormatting('id_ID', null);
     } catch (e) {
-      print('⚠️ Date formatting error: $e');
+      debugPrint('⚠️ Date formatting error: $e');
     }
   }
 
@@ -104,34 +106,34 @@ class DashboardProvider extends ChangeNotifier {
   
   Future<void> initializeNotifications() async {
     if (_notificationsInitialized) {
-      print('ℹ️ Notifications already initialized');
+      debugPrint('ℹ️ Notifications already initialized');
       return;
     }
     
     try {
-      print('🔔 Initializing notifications...');
+      debugPrint('🔔 Initializing notifications...');
       
       // ✅ FIXED: requestPermissions() returns Map<String, bool>
       final permissions = await _notificationManager.requestPermissions();
       final hasPermission = permissions['notification'] == true;
       
       if (!hasPermission) {
-        print('⚠️ No notification permission');
+        debugPrint('⚠️ No notification permission');
         _notificationsInitialized = false;
         return;
       }
       
       _notificationsInitialized = true;
-      print('✅ Notifications initialized');
-      print('   Basic Notification: ✅');
-      print('   Exact Alarm: ${permissions['exactAlarm'] == true ? '✅' : '❌'}');
-      print('   Schedule Exact: ${permissions['scheduleExactAlarm'] == true ? '✅' : '⚠️'}');
-      print('   Battery Optimization: ${permissions['batteryOptimization'] == true ? '✅' : '⚠️'}');
+      debugPrint('✅ Notifications initialized');
+      debugPrint('   Basic Notification: ✅');
+      debugPrint('   Exact Alarm: ${permissions['exactAlarm'] == true ? '✅' : '❌'}');
+      debugPrint('   Schedule Exact: ${permissions['scheduleExactAlarm'] == true ? '✅' : '⚠️'}');
+      debugPrint('   Battery Optimization: ${permissions['batteryOptimization'] == true ? '✅' : '⚠️'}');
       
       notifyListeners();
     } catch (e, stack) {
-      print('❌ Notification init error: $e');
-      print('Stack: $stack');
+      debugPrint('❌ Notification init error: $e');
+      debugPrint('Stack: $stack');
       _notificationsInitialized = false;
     }
   }
@@ -155,7 +157,7 @@ class DashboardProvider extends ChangeNotifier {
       if (now.hour == 0 && now.minute <= 5) {
         if (_prayerTimesUpdateTime == null || 
             !_isSameDay(_prayerTimesUpdateTime!, now)) {
-          print('🕐 Midnight - refreshing prayer times and mahfudzot...');
+          debugPrint('🕐 Midnight - refreshing prayer times and mahfudzot...');
           loadPrayerTimes(forceRefresh: true);
           loadDailyMahfudzot();
         }
@@ -182,14 +184,46 @@ class DashboardProvider extends ChangeNotifier {
           final now = DateTime.now();
           if (_prayerTimesUpdateTime != null && 
               !_isSameDay(_prayerTimesUpdateTime!, now)) {
-            print('📅 New day detected - refreshing prayer times...');
+            debugPrint('📅 New day detected - refreshing prayer times...');
             loadPrayerTimes(forceRefresh: true);
           } else {
             notifyListeners(); // Just update UI
+            _updateWidgetData();
           }
         }
       },
     );
+  }
+
+  void _updateWidgetData() {
+    if (_prayerTimeModel == null) return;
+    
+    final nextPrayer = nextPrayerInfo;
+    if (nextPrayer != null) {
+      String hijriDate = '';
+      try {
+        final hijri = HijriCalendar.now();
+        hijriDate = '${hijri.hDay} ${hijri.longMonthName} ${hijri.hYear}';
+      } catch (e) {
+        hijriDate = 'Hijriah';
+      }
+
+      // Build all 5 prayer times map for widget
+      final times = _prayerTimeModel!.times;
+      final allTimes = <String, String>{};
+      for (final entry in times.entries) {
+        allTimes[entry.key] = '${entry.value.hour.toString().padLeft(2, '0')}:${entry.value.minute.toString().padLeft(2, '0')}';
+      }
+
+      WidgetService.updatePrayerTimeWidget(
+        locationName:  _prayerTimeModel!.locationName,
+        prayerName:    nextPrayer.name,
+        prayerTime:    '${nextPrayer.time.hour.toString().padLeft(2, '0')}:${nextPrayer.time.minute.toString().padLeft(2, '0')}',
+        hijriDate:     hijriDate,
+        timeUntilNext: nextPrayer.duration,
+        allPrayerTimes: allTimes,
+      );
+    }
   }
 
   bool _shouldRefreshLastRead() {
@@ -231,7 +265,7 @@ class DashboardProvider extends ChangeNotifier {
       _isLoadingLocation = false;
       notifyListeners();
     } catch (e) {
-      print('❌ Location error: $e');
+      debugPrint('❌ Location error: $e');
       _isLoadingLocation = false;
       
       _locationData = LocationData(
@@ -257,11 +291,12 @@ class DashboardProvider extends ChangeNotifier {
       _prayerTimesUpdateTime = DateTime.now();
       _isLoadingPrayerTimes = false;
       notifyListeners();
+      _updateWidgetData(); // ✅ Update widget right after loading
       
-      print('✅ Prayer times loaded');
+      debugPrint('✅ Prayer times loaded');
       
     } catch (e) {
-      print('❌ Prayer times error: $e');
+      debugPrint('❌ Prayer times error: $e');
       _errorMessage = 'Gagal memuat waktu sholat';
       _isLoadingPrayerTimes = false;
       
@@ -284,14 +319,14 @@ class DashboardProvider extends ChangeNotifier {
         _lastReadUpdateTime = DateTime.now();
         
         if (!silent) {
-          print('✅ Last read: ${_lastRead?.surahName ?? "None"}');
+          debugPrint('✅ Last read: ${_lastRead?.surahName ?? "None"}');
         }
       }
 
       _isLoadingLastRead = false;
       notifyListeners();
     } catch (e) {
-      print('❌ Last read error: $e');
+      debugPrint('❌ Last read error: $e');
       _isLoadingLastRead = false;
       _lastRead = null;
       notifyListeners();
@@ -320,10 +355,10 @@ class DashboardProvider extends ChangeNotifier {
       _isLoadingMahfudzot = false;
       notifyListeners();
       
-      print('✅ Mahfudzot loaded (random #${index + 1}): ${_dailyMahfudzot?['latin']}');
+      debugPrint('✅ Mahfudzot loaded (random #${index + 1}): ${_dailyMahfudzot?['latin']}');
       
     } catch (e) {
-      print('❌ Mahfudzot error: $e');
+      debugPrint('❌ Mahfudzot error: $e');
       _isLoadingMahfudzot = false;
       _dailyMahfudzot = null;
       notifyListeners();
@@ -340,7 +375,7 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> forceRefreshLastRead() async {
-    print('🔄 Force refresh last read...');
+    debugPrint('🔄 Force refresh last read...');
     _lastReadUpdateTime = null;
     await loadLastRead(silent: false);
   }
@@ -363,7 +398,7 @@ class DashboardProvider extends ChangeNotifier {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   
   Future<void> refreshAll() async {
-    print('🔄 Pull-to-refresh...');
+    debugPrint('🔄 Pull-to-refresh...');
     
     try {
       await Future.wait([
@@ -373,15 +408,15 @@ class DashboardProvider extends ChangeNotifier {
         loadDailyMahfudzot(),
       ]);
       
-      print('✅ Refresh complete');
+      debugPrint('✅ Refresh complete');
       
     } catch (e) {
-      print('❌ Refresh error: $e');
+      debugPrint('❌ Refresh error: $e');
     }
   }
 
   Future<void> clearCaches() async {
-    print('🗑️ Clearing caches...');
+    debugPrint('🗑️ Clearing caches...');
     
     await _prayerTimeService.clearCache();
     await _locationService.clearCache();
@@ -393,7 +428,7 @@ class DashboardProvider extends ChangeNotifier {
     await loadLastRead(silent: false);
     await loadDailyMahfudzot();
     
-    print('✅ Caches cleared');
+    debugPrint('✅ Caches cleared');
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

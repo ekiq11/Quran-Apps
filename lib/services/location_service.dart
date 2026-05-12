@@ -1,8 +1,7 @@
-// lib/services/location_service.dart - UPDATED WITH GEOCODING
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -28,7 +27,7 @@ class LocationService {
     if (!forceRefresh) {
       final cached = await _getCachedLocation();
       if (cached != null) {
-        print('📍 Using cached location: ${cached.displayName}');
+        debugPrint('📍 Using cached location: ${cached.displayName}');
         return cached;
       }
     }
@@ -37,7 +36,7 @@ class LocationService {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('⚠️ Location services disabled, using fallback');
+        debugPrint('⚠️ Location services disabled, using fallback');
         return _getFallbackLocation();
       }
 
@@ -46,30 +45,24 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print('❌ Location permission denied, using fallback');
+          debugPrint('❌ Location permission denied, using fallback');
           return _getFallbackLocation();
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('❌ Location permission denied forever, using fallback');
+        debugPrint('❌ Location permission denied forever, using fallback');
         return _getFallbackLocation();
       }
 
-      print('🔍 Getting current position...');
-      // Get position with timeout
+      debugPrint('🔍 Getting current position...');
+      // Get position with timeout — gunakan timeLimit bawaan Geolocator
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: Duration(seconds: 10),
-      ).timeout(
-        Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ Location timeout');
-          throw TimeoutException('Location request timeout');
-        },
+        timeLimit: const Duration(seconds: 10),
       );
 
-      print('✅ Position found: ${position.latitude}, ${position.longitude}');
+      debugPrint('✅ Position found: ${position.latitude}, ${position.longitude}');
 
       // ✅ Get address from coordinates
       final addressData = await _getAddressFromCoordinates(
@@ -90,14 +83,14 @@ class LocationService {
       // Cache the location
       await _cacheLocation(locationData);
 
-      print('✅ Location updated: ${locationData.displayName}');
+      debugPrint('✅ Location updated: ${locationData.displayName}');
       return locationData;
     } catch (e) {
-      print('❌ Error getting location: $e');
+      debugPrint('❌ Error getting location: $e');
       // Try to use cached location even if expired
       final cached = await _getCachedLocation(ignoreExpiry: true);
       if (cached != null) {
-        print('⚠️ Using expired cache due to error');
+        debugPrint('⚠️ Using expired cache due to error');
         return cached;
       }
       return _getFallbackLocation();
@@ -110,7 +103,7 @@ class LocationService {
     double longitude,
   ) async {
     try {
-      print('🔄 Reverse geocoding: $latitude, $longitude');
+      debugPrint('🔄 Reverse geocoding: $latitude, $longitude');
       
       // Get placemarks (geocoding 4.x doesn't support localeIdentifier)
       final placemarks = await placemarkFromCoordinates(
@@ -119,7 +112,7 @@ class LocationService {
       );
 
       if (placemarks.isEmpty) {
-        print('⚠️ No placemarks found');
+        debugPrint('⚠️ No placemarks found');
         return {
           'locationName': 'Lokasi Tidak Diketahui',
           'city': null,
@@ -167,11 +160,11 @@ class LocationService {
           ? addressParts.join(', ')
           : null;
 
-      print('✅ Geocoding result:');
-      print('   Location: $locationName');
-      print('   City: ${place.locality}');
-      print('   Address: $fullAddress');
-      print('   Country: ${place.country}');
+      debugPrint('✅ Geocoding result:');
+      debugPrint('   Location: $locationName');
+      debugPrint('   City: ${place.locality}');
+      debugPrint('   Address: $fullAddress');
+      debugPrint('   Country: ${place.country}');
 
       return {
         'locationName': locationName,
@@ -180,7 +173,7 @@ class LocationService {
         'country': place.country ?? 'Indonesia',
       };
     } catch (e) {
-      print('❌ Reverse geocoding error: $e');
+      debugPrint('❌ Reverse geocoding error: $e');
       return {
         'locationName': 'Lat: ${latitude.toStringAsFixed(2)}, Long: ${longitude.toStringAsFixed(2)}',
         'city': null,
@@ -212,7 +205,7 @@ class LocationService {
       
       // Check if cache is still valid
       if (!ignoreExpiry && now.difference(lastUpdate) > _cacheDuration) {
-        print('⏰ Cache expired (${now.difference(lastUpdate).inHours}h old)');
+        debugPrint('⏰ Cache expired (${now.difference(lastUpdate).inHours}h old)');
         return null;
       }
 
@@ -226,7 +219,7 @@ class LocationService {
         timestamp: lastUpdate,
       );
     } catch (e) {
-      print('❌ Error reading cached location: $e');
+      debugPrint('❌ Error reading cached location: $e');
       return null;
     }
   }
@@ -248,9 +241,9 @@ class LocationService {
         await prefs.setString(_keyCountry, location.country!);
       }
       await prefs.setString(_keyLastUpdate, location.timestamp.toIso8601String());
-      print('💾 Location cached: ${location.displayName}');
+      debugPrint('💾 Location cached: ${location.displayName}');
     } catch (e) {
-      print('❌ Error caching location: $e');
+      debugPrint('❌ Error caching location: $e');
     }
   }
 
@@ -265,9 +258,9 @@ class LocationService {
       await prefs.remove(_keyAddress);
       await prefs.remove(_keyCountry);
       await prefs.remove(_keyLastUpdate);
-      print('🗑️ Location cache cleared');
+      debugPrint('🗑️ Location cache cleared');
     } catch (e) {
-      print('❌ Error clearing location cache: $e');
+      debugPrint('❌ Error clearing location cache: $e');
     }
   }
 

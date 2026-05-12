@@ -273,12 +273,12 @@ class _TafsirDetailPageState extends State<TafsirDetailPage> {
                         SizedBox(height: cardSpacing * 1.5),
                         Text(
                           widget.ayahText,
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.right,
                           textDirection: TextDirection.rtl,
                           style: TextStyle(
                             fontFamily: 'Utsmani',
                             fontSize: arabicSize,
-                            height: 1.85,
+                            height: 2.2,
                             letterSpacing: 0,
                             color: Color(0xFF1F2937),
                             fontWeight: FontWeight.w500,

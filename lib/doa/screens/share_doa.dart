@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:myquran/doa/model/model_doa.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 class DoaShareFullScreenPage extends StatefulWidget {
   final Doa doa;
@@ -110,9 +111,11 @@ class _DoaShareFullScreenPageState extends State<DoaShareFullScreenPage> {
 
       if (!mounted) return;
 
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text: '${widget.doa.nama}\n\nDibagikan dari Bekal Muslim',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(imagePath)],
+          text: '${widget.doa.nama}\n\nDibagikan dari Bekal Muslim',
+        ),
       );
 
       if (mounted) {

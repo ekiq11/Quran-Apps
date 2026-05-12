@@ -264,7 +264,7 @@ class _ErrorSnackBarContentState extends State<_ErrorSnackBarContent>
             gradient: LinearGradient(
               colors: [
                 _getBackgroundColor(),
-                _getBackgroundColor().withOpacity(0.85),
+                _getBackgroundColor().withValues(alpha: 0.85),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -272,7 +272,7 @@ class _ErrorSnackBarContentState extends State<_ErrorSnackBarContent>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: _getBackgroundColor().withOpacity(0.4),
+                color: _getBackgroundColor().withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: Offset(0, 8),
               ),
@@ -291,7 +291,7 @@ class _ErrorSnackBarContentState extends State<_ErrorSnackBarContent>
                     child: Container(
                       padding: EdgeInsets.all(widget.isTablet ? 10 : 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -329,7 +329,7 @@ class _ErrorSnackBarContentState extends State<_ErrorSnackBarContent>
                       widget.message,
                       style: TextStyle(
                         fontSize: fontSize,
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         height: 1.4,
                       ),
                       maxLines: 3,
@@ -357,10 +357,10 @@ class _ErrorSnackBarContentState extends State<_ErrorSnackBarContent>
                         vertical: widget.isTablet ? 8 : 7,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -496,7 +496,7 @@ class _ErrorDialogState extends State<_ErrorDialog>
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                color.withOpacity(0.05),
+                color.withValues(alpha: 0.05),
               ],
             ),
           ),
@@ -514,7 +514,7 @@ class _ErrorDialogState extends State<_ErrorDialog>
                     child: Container(
                       padding: EdgeInsets.all(widget.isTablet ? 18 : 16),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -606,7 +606,6 @@ class _ErrorDialogState extends State<_ErrorDialog>
                       widget.details!,
                       style: TextStyle(
                         fontSize: fontSize - 2,
-                        fontFamily: 'Courier',
                         color: Colors.grey[800],
                         height: 1.4,
                       ),

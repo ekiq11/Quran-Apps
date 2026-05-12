@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 
 class QuranAudioService {
   static final QuranAudioService _instance = QuranAudioService._internal();
@@ -16,13 +17,59 @@ class QuranAudioService {
   StreamController<PlayerState>? _stateController;
   StreamSubscription<PlayerState>? _playerStateSubscription;
 
-  // HANYA 1 QARI - Mishari Rashid Alafasy
-  static const String baseUrl = 'https://everyayah.com/data/Alafasy_128kbps';
-  static const String qariName = 'Mishari Rashid Alafasy';
+  // Fitur Murojaah / Loop
+  bool _isLooping = false;
+  bool get isLooping => _isLooping;
+
+  // Daftar Qori
+  static const Map<String, String> qariList = {
+    'Mishari Rashid Alafasy': 'Alafasy_128kbps',
+    'Abdul Basit (Murattal)': 'Abdul_Basit_Murattal_192kbps',
+    'Abdurrahmaan As-Sudais': 'Abdurrahmaan_As-Sudais_192kbps',
+    'Abu Bakr Ash-Shaatree': 'Abu_Bakr_Ash-Shaatree_128kbps',
+    'Hani Rifai': 'Hani_Rifai_192kbps',
+    'Mahmoud Khalil Al-Husary': 'Husary_128kbps',
+  };
+
+  String _selectedQariName = 'Mishari Rashid Alafasy';
+  String _selectedQariId = 'Alafasy_128kbps';
 
   // Getters
   bool get isPlaying => !_isDisposed && _isPlaying;
   String? get currentPlayingKey => _currentPlayingKey;
+  String get selectedQariName => _selectedQariName;
+  
+  Future<void> initPreferences() async {
+    try {
+      final prefs = await shared_prefs.SharedPreferences.getInstance();
+      _selectedQariName = prefs.getString('selected_qari_name') ?? 'Mishari Rashid Alafasy';
+      _selectedQariId = prefs.getString('selected_qari_id') ?? 'Alafasy_128kbps';
+      _isLooping = prefs.getBool('audio_loop_mode') ?? false;
+    } catch (e) {
+      debugPrint('Error loading audio prefs: $e');
+    }
+  }
+
+  Future<void> setQari(String name, String id) async {
+    _selectedQariName = name;
+    _selectedQariId = id;
+    try {
+      final prefs = await shared_prefs.SharedPreferences.getInstance();
+      await prefs.setString('selected_qari_name', name);
+      await prefs.setString('selected_qari_id', id);
+    } catch (e) {}
+  }
+
+  Future<void> toggleLoopMode() async {
+    _isLooping = !_isLooping;
+    if (_audioPlayer != null) {
+      await _audioPlayer!.setReleaseMode(_isLooping ? ReleaseMode.loop : ReleaseMode.stop);
+    }
+    try {
+      final prefs = await shared_prefs.SharedPreferences.getInstance();
+      await prefs.setBool('audio_loop_mode', _isLooping);
+    } catch (e) {}
+  }
 
   Stream<PlayerState> get playerStateStream {
     _ensureInitialized();
@@ -97,7 +144,7 @@ class QuranAudioService {
     // Format: 001001.mp3 (surah 3 digit + ayah 3 digit)
     final surahStr = surahNumber.toString().padLeft(3, '0');
     final ayahStr = ayahNumber.toString().padLeft(3, '0');
-    final url = '$baseUrl/$surahStr$ayahStr.mp3';
+    final url = 'https://everyayah.com/data/$_selectedQariId/$surahStr$ayahStr.mp3';
     
     debugPrint('🎵 Audio URL: $url');
     return url;
@@ -295,7 +342,12 @@ class QuranAudioService {
     }
   }
 
-  /// Dispose resources
+  /// ⚠️ PERINGATAN SINGLETON: Method ini TIDAK boleh dipanggil dari Page/Widget.
+  /// Singleton hidup sepanjang lifecycle app. Gunakan [stop()] untuk membersihkan
+  /// state audio saat meninggalkan halaman baca.
+  ///
+  /// Method ini hanya untuk keperluan testing atau reset manual dari service layer.
+  @visibleForTesting
   Future<void> dispose() async {
     if (_isDisposed) {
       debugPrint('⚠️ Already disposed');
@@ -304,45 +356,37 @@ class QuranAudioService {
 
     debugPrint('🗑️  Disposing audio service...');
     _isDisposed = true;
-    
+
     try {
-      // 1. Stop audio
-      if (_isPlaying) {
-        await _safeStop();
-      }
-      
-      // 2. Cancel subscription
+      if (_isPlaying) await _safeStop();
+
       await _playerStateSubscription?.cancel();
       _playerStateSubscription = null;
-      
-      // 3. Close stream controller
+
       if (_stateController != null && !_stateController!.isClosed) {
         await _stateController!.close();
         _stateController = null;
       }
-      
-      // 4. Dispose player
+
       if (_audioPlayer != null) {
         await _audioPlayer!.dispose();
         _audioPlayer = null;
       }
-      
-      // 5. Reset state
+
       _isPlaying = false;
       _currentPlayingKey = null;
-      
+
       debugPrint('✅ Audio service disposed successfully');
-      
     } catch (e) {
       debugPrint('⚠️ Error during disposal: $e');
     }
   }
 
-  /// Reset service
+  /// Reset service — reinitialize singleton agar bisa digunakan kembali setelah dispose
   Future<void> reset() async {
     debugPrint('🔄 Resetting audio service...');
     await dispose();
     _isDisposed = false;
     _initializePlayer();
   }
-}
+}

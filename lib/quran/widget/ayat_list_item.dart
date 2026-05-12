@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myquran/quran/model/surah_model.dart';
-import 'package:myquran/quran/service/tasfir_service.dart';
-import 'package:myquran/quran/helper/tajwid_helper.dart';
+import 'package:myquran/quran/service/audio_service.dart';
+import 'package:myquran/quran/screens/tafsir_detail_page.dart';
 import 'package:myquran/quran/widget/share_ayat.dart';
+import 'package:myquran/screens/util/constants.dart';
 import 'package:myquran/screens/util/theme.dart';
+import 'package:myquran/quran/helper/tajwid_helper.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/rendering.dart';
@@ -53,17 +55,17 @@ class AyahListItem extends StatelessWidget {
     final baseStyle = TextStyle(
       fontFamily: 'Utsmani',
       fontSize: fontSize,
-      height: 1.85,
+      height: 2.2,
       color: theme.arabicText,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.0,
-      wordSpacing: 0.0,
+      wordSpacing: 1.5,
     );
 
     final strutStyle = StrutStyle(
       fontFamily: 'Utsmani',
       fontSize: fontSize,
-      height: 1.85,
+      height: 2.2,
       forceStrutHeight: true,
       leading: 0.0,
     );
@@ -84,7 +86,7 @@ class AyahListItem extends StatelessWidget {
       child: RepaintBoundary(
         child: showTajwid
             ? RichText(
-                textAlign: TextAlign.justify,
+                textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
                 locale: const Locale('ar'),
                 strutStyle: strutStyle,
@@ -97,7 +99,7 @@ class AyahListItem extends StatelessWidget {
               )
             : Text(
                 ayahText,
-                textAlign: TextAlign.justify,
+                textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
                 locale: const Locale('ar'),
                 textScaleFactor: 1.0,

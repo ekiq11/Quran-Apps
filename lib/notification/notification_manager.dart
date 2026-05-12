@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:myquran/notification/notification_service.dart';
 import 'package:myquran/quran/service/quran_service.dart';
+import 'package:myquran/util/navigator_key.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -320,13 +321,13 @@ class NotificationManager {
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
-    print('');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🧠 Notification Manager v19.0 - COMPLETE PRAYER SYSTEM');
-    print('   ✅ ALL 7 Prayer Times: Tahajud, Subuh, Duha, Dzuhur, Ashar, Maghrib, Isya');
-    print('   ✅ Background scheduling (works when app closed)');
-    print('   ✅ Smart quotes for each prayer');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🧠 Notification Manager v19.0 - COMPLETE PRAYER SYSTEM');
+    debugPrint('   ✅ ALL 7 Prayer Times: Tahajud, Subuh, Duha, Dzuhur, Ashar, Maghrib, Isya');
+    debugPrint('   ✅ Background scheduling (works when app closed)');
+    debugPrint('   ✅ Smart quotes for each prayer');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       await _initializeTimezone();
@@ -336,19 +337,19 @@ class NotificationManager {
       final hasPerms = await ensurePermissions();
       
       if (!hasPerms) {
-        print('❌ Permissions denied');
+        debugPrint('❌ Permissions denied');
         return false;
       }
       
       _setupMidnightReschedule();
       
       _isInitialized = true;
-      print('✅ Notification System Ready');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('');
+      debugPrint('✅ Notification System Ready');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
       return true;
     } catch (e, stack) {
-      print('❌ Init failed: $e\n$stack');
+      debugPrint('❌ Init failed: $e\n$stack');
       return false;
     }
   }
@@ -380,11 +381,11 @@ class NotificationManager {
     final hasPermissions = await hasRequiredPermissions();
     
     if (hasPermissions) {
-      print('✅ All permissions already granted');
+      debugPrint('✅ All permissions already granted');
       return true;
     }
     
-    print('⚠️ Missing permissions, requesting...');
+    debugPrint('⚠️ Missing permissions, requesting...');
     final result = await requestPermissions();
     
     return result['notification'] == true;
@@ -396,7 +397,7 @@ class NotificationManager {
     final savedTz = prefs.getString('user_timezone') ?? 'Asia/Makassar';
     _userLocation = tz.getLocation(savedTz);
     tz.setLocalLocation(_userLocation!);
-    print('📍 Timezone: $savedTz');
+    debugPrint('📍 Timezone: $savedTz');
   }
 
   Future<void> _initializePlugin() async {
@@ -413,24 +414,24 @@ class NotificationManager {
       onDidReceiveBackgroundNotificationResponse: _onDidReceiveNotification,
     );
 
-    print('✅ Notification plugin initialized');
+    debugPrint('✅ Notification plugin initialized');
   }
 
   @pragma('vm:entry-point')
   static Future<void> _onDidReceiveNotification(NotificationResponse response) async {
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🔔 NOTIFICATION RECEIVED');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🔔 NOTIFICATION RECEIVED');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       if (response.payload == null) {
-        print('⚠️ No payload found');
+        debugPrint('⚠️ No payload found');
         return;
       }
       
       final data = jsonDecode(response.payload!) as Map<String, dynamic>;
       
-      print('📋 Data: ${data['title']}');
+      debugPrint('📋 Data: ${data['title']}');
       
       await _saveNotificationToHistory(data);
       await _forceUpdateBadgeCount();
@@ -440,11 +441,11 @@ class NotificationManager {
         await NotificationManager()._trackPrayerInteraction(prayerName);
       }
       
-      print('✅ Processed successfully\n');
+      debugPrint('✅ Processed successfully\n');
       
     } catch (e, stack) {
-      print('❌ Error: $e');
-      print('Stack: $stack');
+      debugPrint('❌ Error: $e');
+      debugPrint('Stack: $stack');
     }
   }
 
@@ -495,10 +496,10 @@ class NotificationManager {
       
       await prefs.setString(_keyNotificationHistory, jsonEncode(history));
       
-      print('   📊 History: ${history.length} total');
+      debugPrint('   📊 History: ${history.length} total');
       
     } catch (e, stack) {
-      print('   ❌ Save error: $e');
+      debugPrint('   ❌ Save error: $e');
     }
   }
 
@@ -535,10 +536,10 @@ class NotificationManager {
       await prefs.setInt(_keyBadgeCount, unreadCount);
       NotificationService.badgeCount.value = unreadCount;
       
-      print('   🔢 Badge: $unreadCount');
+      debugPrint('   🔢 Badge: $unreadCount');
       
     } catch (e) {
-      print('   ❌ Badge error: $e');
+      debugPrint('   ❌ Badge error: $e');
     }
   }
 
@@ -560,7 +561,7 @@ class NotificationManager {
       await prefs.setString('prayer_statistics', jsonEncode(stats));
       
     } catch (e) {
-      print('   ⚠️ Track error: $e');
+      debugPrint('   ⚠️ Track error: $e');
     }
   }
 
@@ -608,11 +609,11 @@ class NotificationManager {
       ),
     );
     
-    print('✅ Channels created');
+    debugPrint('✅ Channels created');
   }
 
   Future<Map<String, bool>> requestPermissions() async {
-    print('🔐 Requesting permissions...');
+    debugPrint('🔐 Requesting permissions...');
     
     final result = <String, bool>{
       'notification': false,
@@ -624,7 +625,7 @@ class NotificationManager {
     result['notification'] = status.isGranted;
     
     if (!status.isGranted) {
-      print('❌ Notification denied');
+      debugPrint('❌ Notification denied');
       return result;
     }
     
@@ -643,7 +644,7 @@ class NotificationManager {
             result['exactAlarm'] = true;
           }
         } catch (e) {
-          print('⚠️ Exact alarm error: $e');
+          debugPrint('⚠️ Exact alarm error: $e');
         }
       }
       
@@ -657,7 +658,7 @@ class NotificationManager {
           result['batteryOptimization'] = true;
         }
       } catch (e) {
-        print('⚠️ Battery opt unavailable');
+        debugPrint('⚠️ Battery opt unavailable');
       }
     }
     
@@ -671,10 +672,10 @@ class NotificationManager {
     final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 1);
     final duration = tomorrow.difference(now);
     
-    print('⏰ Auto-reschedule: ${tomorrow.hour}:${tomorrow.minute}');
+    debugPrint('⏰ Auto-reschedule: ${tomorrow.hour}:${tomorrow.minute}');
     
     _midnightRescheduleTimer = Timer(duration, () async {
-      print('\n🌙 MIDNIGHT AUTO-RESCHEDULE');
+      debugPrint('\n🌙 MIDNIGHT AUTO-RESCHEDULE');
       _setupMidnightReschedule();
     });
   }
@@ -700,11 +701,11 @@ class NotificationManager {
             onNotificationTappedWithContext?.call(context, type, data);
           }
         } catch (e) {
-          print('⚠️ Context error: $e');
+          debugPrint('⚠️ Context error: $e');
         }
       }
     } catch (e) {
-      print('❌ Tap error: $e');
+      debugPrint('❌ Tap error: $e');
     }
   }
 
@@ -718,9 +719,9 @@ class NotificationManager {
     required Map<String, TimeOfDay> tilawahTimes,
     Map<String, TimeOfDay>? doaTimes,
   }) async {
-    print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🧠 COMPLETE PRAYER SCHEDULING v19.0');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🧠 COMPLETE PRAYER SCHEDULING v19.0');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       await cancelAllNotifications();
@@ -729,7 +730,7 @@ class NotificationManager {
       final now = DateTime.now();
       final currentMinutes = now.hour * 60 + now.minute;
       
-      print('\n📍 Context: ${now.hour}:${now.minute.toString().padLeft(2, '0')}');
+      debugPrint('\n📍 Context: ${now.hour}:${now.minute.toString().padLeft(2, '0')}');
       
       // ✅ Get enabled status for ALL prayer times
       final enabled = enabledPrayers ?? {
@@ -746,7 +747,7 @@ class NotificationManager {
       int skipped = 0;
       
       // ✅ Schedule ALL PRAYER NOTIFICATIONS
-      print('\n1️⃣ PRAYER TIMES (ALL 7 TIMES):');
+      debugPrint('\n1️⃣ PRAYER TIMES (ALL 7 TIMES):');
       
       // ✅ List of ALL prayer times (excluding Syuruk - not a prayer time)
       final allPrayers = ['Tahajud', 'Subuh', 'Duha', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'];
@@ -755,7 +756,7 @@ class NotificationManager {
         final prayerTime = prayerTimes[prayerName];
         
         if (prayerTime == null) {
-          print('   ⚠️  $prayerName: time not available');
+          debugPrint('   ⚠️  $prayerName: time not available');
           continue;
         }
         
@@ -773,13 +774,13 @@ class NotificationManager {
                   await _schedulePrayerSmart(prayerName, prayerTime, prayerTimes);
                   scheduled++;
                   final remaining = prayerMinutes - currentMinutes;
-                  print('   ✅ $prayerName: ${_fmt(prayerTime)} (+${remaining}m)');
+                  debugPrint('   ✅ $prayerName: ${_fmt(prayerTime)} (+${remaining}m)');
                 } catch (e) {
-                  print('   ❌ $prayerName: $e');
+                  debugPrint('   ❌ $prayerName: $e');
                 }
               } else {
                 skipped++;
-                print('   ⏭️  $prayerName: ${_fmt(prayerTime)} (passed)');
+                debugPrint('   ⏭️  $prayerName: ${_fmt(prayerTime)} (passed)');
               }
             } else {
               // Current time is daytime/evening, schedule Tahajud for tomorrow
@@ -788,9 +789,9 @@ class NotificationManager {
                 scheduled++;
                 final minutesUntilMidnight = (24 * 60) - currentMinutes;
                 final totalMinutes = minutesUntilMidnight + prayerMinutes;
-                print('   ✅ $prayerName: ${_fmt(prayerTime)} (+${totalMinutes}m - tomorrow)');
+                debugPrint('   ✅ $prayerName: ${_fmt(prayerTime)} (+${totalMinutes}m - tomorrow)');
               } catch (e) {
-                print('   ❌ $prayerName: $e');
+                debugPrint('   ❌ $prayerName: $e');
               }
             }
           } else {
@@ -800,22 +801,22 @@ class NotificationManager {
                 await _schedulePrayerSmart(prayerName, prayerTime, prayerTimes);
                 scheduled++;
                 final remaining = prayerMinutes - currentMinutes;
-                print('   ✅ $prayerName: ${_fmt(prayerTime)} (+${remaining}m)');
+                debugPrint('   ✅ $prayerName: ${_fmt(prayerTime)} (+${remaining}m)');
               } catch (e) {
-                print('   ❌ $prayerName: $e');
+                debugPrint('   ❌ $prayerName: $e');
               }
             } else {
               skipped++;
-              print('   ⏭️  $prayerName: ${_fmt(prayerTime)} (passed)');
+              debugPrint('   ⏭️  $prayerName: ${_fmt(prayerTime)} (passed)');
             }
           }
         } else {
-          print('   🔕 $prayerName: disabled');
+          debugPrint('   🔕 $prayerName: disabled');
         }
       }
       
       // Dzikir
-      print('\n2️⃣ DZIKIR:');
+      debugPrint('\n2️⃣ DZIKIR:');
       if (prefs.getBool('notif_enable_dzikir_pagi') ?? true) {
         final subuhTime = prayerTimes['Subuh'];
         if (subuhTime != null) {
@@ -826,9 +827,9 @@ class NotificationManager {
             try {
               await _scheduleDzikirSmart('Pagi', time);
               scheduled++;
-              print('   ✅ Pagi: ${_fmt(time)}');
+              debugPrint('   ✅ Pagi: ${_fmt(time)}');
             } catch (e) {
-              print('   ❌ Pagi: $e');
+              debugPrint('   ❌ Pagi: $e');
             }
           } else {
             skipped++;
@@ -846,9 +847,9 @@ class NotificationManager {
             try {
               await _scheduleDzikirSmart('Petang', time);
               scheduled++;
-              print('   ✅ Petang: ${_fmt(time)}');
+              debugPrint('   ✅ Petang: ${_fmt(time)}');
             } catch (e) {
-              print('   ❌ Petang: $e');
+              debugPrint('   ❌ Petang: $e');
             }
           } else {
             skipped++;
@@ -857,7 +858,7 @@ class NotificationManager {
       }
       
       // Tilawah
-      print('\n3️⃣ TILAWAH:');
+      debugPrint('\n3️⃣ TILAWAH:');
       final tilawahSchedule = [
         ('Pagi', 'notif_enable_tilawah_pagi', true),
         ('Siang', 'notif_enable_tilawah_siang', false),
@@ -874,9 +875,9 @@ class NotificationManager {
               try {
                 await _scheduleTilawahSmart(type, time);
                 scheduled++;
-                print('   ✅ $type: ${_fmt(time)}');
+                debugPrint('   ✅ $type: ${_fmt(time)}');
               } catch (e) {
-                print('   ❌ $type: $e');
+                debugPrint('   ❌ $type: $e');
               }
             } else {
               skipped++;
@@ -886,7 +887,7 @@ class NotificationManager {
       }
       
       // Doa
-      print('\n4️⃣ DOA:');
+      debugPrint('\n4️⃣ DOA:');
       if (prefs.getBool('notif_enable_doa_pagi') ?? true) {
         final subuhTime = prayerTimes['Subuh'];
         if (subuhTime != null) {
@@ -897,9 +898,9 @@ class NotificationManager {
             try {
               await _scheduleDoaSmart('Pagi', time);
               scheduled++;
-              print('   ✅ Pagi: ${_fmt(time)}');
+              debugPrint('   ✅ Pagi: ${_fmt(time)}');
             } catch (e) {
-              print('   ❌ Pagi: $e');
+              debugPrint('   ❌ Pagi: $e');
             }
           } else {
             skipped++;
@@ -917,9 +918,9 @@ class NotificationManager {
             try {
               await _scheduleDoaSmart('Petang', time);
               scheduled++;
-              print('   ✅ Petang: ${_fmt(time)}');
+              debugPrint('   ✅ Petang: ${_fmt(time)}');
             } catch (e) {
-              print('   ❌ Petang: $e');
+              debugPrint('   ❌ Petang: $e');
             }
           } else {
             skipped++;
@@ -928,15 +929,15 @@ class NotificationManager {
       }
       
       final pending = await _notifications.pendingNotificationRequests();
-      print('\n📊 Summary:');
-      print('   ✅ Scheduled: $scheduled');
-      print('   ⏭️  Skipped: $skipped');
-      print('   📋 Pending: ${pending.length}');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      debugPrint('\n📊 Summary:');
+      debugPrint('   ✅ Scheduled: $scheduled');
+      debugPrint('   ⏭️  Skipped: $skipped');
+      debugPrint('   📋 Pending: ${pending.length}');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
     } catch (e, stack) {
-      print('❌ Fatal: $e');
-      print('Stack: $stack');
+      debugPrint('❌ Fatal: $e');
+      debugPrint('Stack: $stack');
       rethrow;
     }
   }
@@ -1195,7 +1196,7 @@ class NotificationManager {
 
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();
-    print('🗑️ All notifications cancelled');
+    debugPrint('🗑️ All notifications cancelled');
   }
 
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
@@ -1213,5 +1214,5 @@ class NotificationManager {
     _midnightRescheduleTimer?.cancel();
   }
 }
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+// navigatorKey didefinisikan di lib/util/navigator_key.dart
+// dan di-import di atas.

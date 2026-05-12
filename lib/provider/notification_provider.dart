@@ -53,9 +53,9 @@ class NotificationBadgeManager {
   Future<void> initialize() async {
     if (_isInitialized) return;
     
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🚀 INITIALIZING NOTIFICATION BADGE MANAGER (Singleton)');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🚀 INITIALIZING NOTIFICATION BADGE MANAGER (Singleton)');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // First load
     await refresh();
@@ -65,10 +65,10 @@ class NotificationBadgeManager {
     
     _isInitialized = true;
     
-    print('✅ Badge Manager Ready');
-    print('   📊 Unread: ${unreadCount.value}');
-    print('   📈 Total: ${totalCount.value}');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    debugPrint('✅ Badge Manager Ready');
+    debugPrint('   📊 Unread: ${unreadCount.value}');
+    debugPrint('   📈 Total: ${totalCount.value}');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
   void _startAutoRefresh() {
@@ -129,7 +129,7 @@ class NotificationBadgeManager {
       _updateCounts(unread, realNotifications.length, silent);
       
     } catch (e) {
-      print('❌ Badge refresh error: $e');
+      debugPrint('❌ Badge refresh error: $e');
       _updateCounts(0, 0, silent);
     } finally {
       isLoading.value = false;
@@ -150,7 +150,7 @@ class NotificationBadgeManager {
     }
     
     if (changed && !silent) {
-      print('🔔 Badge updated: $unread unread / $total total');
+      debugPrint('🔔 Badge updated: $unread unread / $total total');
     }
   }
   
@@ -195,11 +195,11 @@ class NotificationBadgeManager {
       unreadCount.value++;
       totalCount.value++;
       
-      print('➕ Notification added: $title');
-      print('   Badge: ${unreadCount.value} unread');
+      debugPrint('➕ Notification added: $title');
+      debugPrint('   Badge: ${unreadCount.value} unread');
       
     } catch (e) {
-      print('❌ Add notification error: $e');
+      debugPrint('❌ Add notification error: $e');
     }
   }
   
@@ -225,12 +225,12 @@ class NotificationBadgeManager {
       // Instant update
       if (unreadCount.value > 0) {
         unreadCount.value--;
-        print('📖 Marked as read: $id');
-        print('   Badge: ${unreadCount.value} unread');
+        debugPrint('📖 Marked as read: $id');
+        debugPrint('   Badge: ${unreadCount.value} unread');
       }
       
     } catch (e) {
-      print('❌ Mark as read error: $e');
+      debugPrint('❌ Mark as read error: $e');
     }
   }
   
@@ -254,10 +254,10 @@ class NotificationBadgeManager {
       
       // Instant update
       unreadCount.value = 0;
-      print('📖 All marked as read');
+      debugPrint('📖 All marked as read');
       
     } catch (e) {
-      print('❌ Mark all as read error: $e');
+      debugPrint('❌ Mark all as read error: $e');
     }
   }
   
@@ -272,10 +272,10 @@ class NotificationBadgeManager {
       unreadCount.value = 0;
       totalCount.value = 0;
       
-      print('🗑️ All notifications cleared');
+      debugPrint('🗑️ All notifications cleared');
       
     } catch (e) {
-      print('❌ Clear all error: $e');
+      debugPrint('❌ Clear all error: $e');
     }
   }
   
@@ -294,16 +294,16 @@ class NotificationBadgeManager {
   
   /// Debug info
   void printDebugInfo() {
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🐛 NOTIFICATION BADGE DEBUG INFO');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('   Initialized: $_isInitialized');
-    print('   Unread Count: ${unreadCount.value}');
-    print('   Total Count: ${totalCount.value}');
-    print('   Has Unread: $hasUnread');
-    print('   Is Loading: ${isLoading.value}');
-    print('   Auto-Refresh: ${_autoRefreshTimer?.isActive ?? false}');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🐛 NOTIFICATION BADGE DEBUG INFO');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('   Initialized: $_isInitialized');
+    debugPrint('   Unread Count: ${unreadCount.value}');
+    debugPrint('   Total Count: ${totalCount.value}');
+    debugPrint('   Has Unread: $hasUnread');
+    debugPrint('   Is Loading: ${isLoading.value}');
+    debugPrint('   Auto-Refresh: ${_autoRefreshTimer?.isActive ?? false}');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
   /// Dispose (call on app termination)

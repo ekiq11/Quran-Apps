@@ -75,24 +75,27 @@ class QuranAppBar extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.record_voice_over,
-                        size: 10,
-                        color: Color(0xFFFFD700),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        QuranAudioService.qariName,
-                        style: TextStyle(
-                          fontSize: 10,
+                  GestureDetector(
+                    onTap: onSettingsPressed,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.record_voice_over,
+                          size: 10,
                           color: Color(0xFFFFD700),
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 4),
+                        Text(
+                          QuranAudioService().selectedQariName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFFFD700),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

@@ -68,21 +68,21 @@ class NotificationService {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   
   Future<void> initialize() async {
-    print('');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🔄 NOTIFICATION SERVICE v2.0 (Compatibility Layer)');
-    print('   Backend: NotificationManager v8.0');
-    print('   Features: Badge Auto-Update, Reactive UI');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🔄 NOTIFICATION SERVICE v2.0 (Compatibility Layer)');
+    debugPrint('   Backend: NotificationManager v8.0');
+    debugPrint('   Features: Badge Auto-Update, Reactive UI');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     try {
       // ✅ Initialize NotificationManager backend
       final success = await _manager.initialize();
       
       if (!success) {
-        print('❌ NotificationManager initialization failed');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('');
+        debugPrint('❌ NotificationManager initialization failed');
+        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        debugPrint('');
         return;
       }
       
@@ -92,17 +92,17 @@ class NotificationService {
       // ✅ Update badge count from storage
       await updateBadgeCountManual();
       
-      print('✅ NotificationService Ready');
-      print('   Using NotificationManager backend');
-      print('   Badge count: ${badgeCount.value}');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('');
+      debugPrint('✅ NotificationService Ready');
+      debugPrint('   Using NotificationManager backend');
+      debugPrint('   Badge count: ${badgeCount.value}');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
       
     } catch (e, stack) {
-      print('❌ NotificationService initialization error: $e');
-      print('Stack: $stack');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('');
+      debugPrint('❌ NotificationService initialization error: $e');
+      debugPrint('Stack: $stack');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
     }
   }
 
@@ -113,13 +113,13 @@ class NotificationService {
       // Convert map to string (old code expects string)
       final dataString = data.toString();
       onNotificationTapped?.call(type, dataString);
-      print('🔔 Callback adapted: $type → $dataString');
+      debugPrint('🔔 Callback adapted: $type → $dataString');
       
       // ✅ AUTO-UPDATE BADGE when notification is received
       NotificationService().updateBadgeCountManual();
       
     } catch (e) {
-      print('⚠️ Error in callback adapter: $e');
+      debugPrint('⚠️ Error in callback adapter: $e');
     }
   }
 
@@ -132,8 +132,8 @@ class NotificationService {
   Future<void> scheduleTodayPrayerNotifications(
     Map<String, TimeOfDay> prayerTimes
   ) async {
-    print('🔄 NotificationService.scheduleTodayPrayerNotifications()');
-    print('   → Forwarding to NotificationManager.scheduleAllNotifications()');
+    debugPrint('🔄 NotificationService.scheduleTodayPrayerNotifications()');
+    debugPrint('   → Forwarding to NotificationManager.scheduleAllNotifications()');
     
     try {
       // ✅ Convert to NotificationManager format
@@ -160,13 +160,13 @@ class NotificationService {
         tilawahTimes: tilawahTimes,
       );
       
-      print('✅ Prayer notifications scheduled via NotificationManager');
+      debugPrint('✅ Prayer notifications scheduled via NotificationManager');
       
       // ✅ NOTE: Badge count TIDAK update di sini!
       // Badge hanya update saat notifikasi benar-benar muncul
       
     } catch (e) {
-      print('❌ Schedule failed: $e');
+      debugPrint('❌ Schedule failed: $e');
       rethrow;
     }
   }
@@ -175,8 +175,8 @@ class NotificationService {
   Future<void> scheduleAllNotifications({
     required Map<String, TimeOfDay> prayerTimes
   }) async {
-    print('🔄 NotificationService.scheduleAllNotifications()');
-    print('   → Forwarding to scheduleTodayPrayerNotifications()');
+    debugPrint('🔄 NotificationService.scheduleAllNotifications()');
+    debugPrint('   → Forwarding to scheduleTodayPrayerNotifications()');
     
     await scheduleTodayPrayerNotifications(prayerTimes);
   }
@@ -187,14 +187,14 @@ class NotificationService {
   
   /// Cancel all notifications
   Future<void> cancelAllNotifications() async {
-    print('🔄 NotificationService.cancelAllNotifications()');
-    print('   → Forwarding to NotificationManager.cancelAllNotifications()');
+    debugPrint('🔄 NotificationService.cancelAllNotifications()');
+    debugPrint('   → Forwarding to NotificationManager.cancelAllNotifications()');
     
     try {
       await _manager.cancelAllNotifications();
-      print('✅ All notifications cancelled via NotificationManager');
+      debugPrint('✅ All notifications cancelled via NotificationManager');
     } catch (e) {
-      print('❌ Cancel failed: $e');
+      debugPrint('❌ Cancel failed: $e');
       rethrow;
     }
   }
@@ -202,9 +202,9 @@ class NotificationService {
   /// Cancel only prayer notifications
   /// Note: NotificationManager's cancelAll handles all types
   Future<void> cancelAllPrayerNotifications() async {
-    print('🔄 NotificationService.cancelAllPrayerNotifications()');
-    print('   → Forwarding to NotificationManager.cancelAllNotifications()');
-    print('   (NotificationManager cancels all notification types)');
+    debugPrint('🔄 NotificationService.cancelAllPrayerNotifications()');
+    debugPrint('   → Forwarding to NotificationManager.cancelAllNotifications()');
+    debugPrint('   (NotificationManager cancels all notification types)');
     
     await cancelAllNotifications();
   }
@@ -218,9 +218,9 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keySilentMode, enabled);
-      print('🔇 Silent mode: ${enabled ? "ON" : "OFF"}');
+      debugPrint('🔇 Silent mode: ${enabled ? "ON" : "OFF"}');
     } catch (e) {
-      print('⚠️ Error setting silent mode: $e');
+      debugPrint('⚠️ Error setting silent mode: $e');
     }
   }
 
@@ -230,7 +230,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_keySilentMode) ?? false;
     } catch (e) {
-      print('⚠️ Error getting silent mode: $e');
+      debugPrint('⚠️ Error getting silent mode: $e');
       return false;
     }
   }
@@ -255,7 +255,7 @@ class NotificationService {
       if (historyJson == null) {
         await prefs.setInt(_keyBadgeCount, 0);
         badgeCount.value = 0;
-        print('📊 Badge count: 0 (no history)');
+        debugPrint('📊 Badge count: 0 (no history)');
         return;
       }
       
@@ -279,10 +279,10 @@ class NotificationService {
       await prefs.setInt(_keyBadgeCount, unreadCount);
       badgeCount.value = unreadCount;
       
-      print('📊 Badge count updated: $unreadCount unread notifications');
+      debugPrint('📊 Badge count updated: $unreadCount unread notifications');
       
     } catch (e) {
-      print('⚠️ Error updating badge count: $e');
+      debugPrint('⚠️ Error updating badge count: $e');
       badgeCount.value = 0;
     }
   }
@@ -293,7 +293,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getInt(_keyBadgeCount) ?? 0;
     } catch (e) {
-      print('⚠️ Error getting badge count: $e');
+      debugPrint('⚠️ Error getting badge count: $e');
       return 0;
     }
   }
@@ -304,9 +304,9 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_keyBadgeCount, 0);
       badgeCount.value = 0;
-      print('✅ Badge cleared');
+      debugPrint('✅ Badge cleared');
     } catch (e) {
-      print('⚠️ Error clearing badge: $e');
+      debugPrint('⚠️ Error clearing badge: $e');
     }
   }
 
@@ -316,15 +316,15 @@ class NotificationService {
   
   /// Get list of pending (scheduled) notifications
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    print('🔄 NotificationService.getPendingNotifications()');
-    print('   → Forwarding to NotificationManager.getPendingNotifications()');
+    debugPrint('🔄 NotificationService.getPendingNotifications()');
+    debugPrint('   → Forwarding to NotificationManager.getPendingNotifications()');
     
     try {
       final pending = await _manager.getPendingNotifications();
-      print('📋 Found ${pending.length} pending notifications');
+      debugPrint('📋 Found ${pending.length} pending notifications');
       return pending;
     } catch (e) {
-      print('⚠️ Error getting pending notifications: $e');
+      debugPrint('⚠️ Error getting pending notifications: $e');
       return [];
     }
   }
@@ -334,10 +334,10 @@ class NotificationService {
     try {
       final status = await Permission.notification.status;
       final isGranted = status.isGranted;
-      print('🔐 Notification permission: ${isGranted ? "GRANTED" : "DENIED"}');
+      debugPrint('🔐 Notification permission: ${isGranted ? "GRANTED" : "DENIED"}');
       return isGranted;
     } catch (e) {
-      print('⚠️ Error checking permission: $e');
+      debugPrint('⚠️ Error checking permission: $e');
       return false;
     }
   }
@@ -354,7 +354,7 @@ class NotificationService {
   
   /// Dispose/cleanup (currently no-op as NotificationManager handles everything)
   void dispose() {
-    print('🧹 NotificationService disposed');
+    debugPrint('🧹 NotificationService disposed');
     // NotificationManager is a singleton, no need to dispose
   }
 }

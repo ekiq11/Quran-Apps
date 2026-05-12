@@ -6,10 +6,15 @@ import 'package:myquran/quran/screens/list_page.dart';
 
 
 class QuranMainPage extends StatelessWidget {
-  const QuranMainPage({Key? key}) : super(key: key);
+  final bool autoOpenLastRead;
+
+  const QuranMainPage({
+    Key? key,
+    this.autoOpenLastRead = false,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return QuranListPage();
+    return QuranListPage(autoOpenLastRead: autoOpenLastRead);
   }
 }

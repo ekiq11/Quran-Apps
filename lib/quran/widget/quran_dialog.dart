@@ -1,6 +1,7 @@
 // quran/widget/quran_dialog.dart - ✅ DIALOG + STICKY FAB NAVIGATION
 import 'package:flutter/material.dart';
 import 'package:myquran/quran/widget/tajwid_dialog.dart';
+import 'package:myquran/quran/service/audio_service.dart';
 
 class QuranDialogs {
   
@@ -581,6 +582,25 @@ class _RealtimeSettingsSheetState extends State<_RealtimeSettingsSheet> {
                     
                     SizedBox(height: 24),
                     
+                    _buildSectionHeader('Audio & Murojaah', Icons.headset),
+                    SizedBox(height: 12),
+                    _buildToggleOption(
+                      icon: Icons.repeat_one_rounded,
+                      iconColor: Color(0xFFF59E0B),
+                      iconBg: Color(0xFFF59E0B).withOpacity(0.1),
+                      title: 'Mode Murojaah (Ulang Ayat)',
+                      subtitle: 'Audio akan diputar berulang',
+                      value: QuranAudioService().isLooping,
+                      onChanged: (value) async {
+                        await QuranAudioService().toggleLoopMode();
+                        setState(() {});
+                      },
+                    ),
+                    SizedBox(height: 12),
+                    _buildQariSelector(),
+                    
+                    SizedBox(height: 24),
+                    
                     _buildSectionHeader('Tema Aplikasi', Icons.palette),
                     SizedBox(height: 12),
                     _buildToggleOption(
@@ -940,6 +960,103 @@ class _RealtimeSettingsSheetState extends State<_RealtimeSettingsSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQariSelector() {
+    final audioService = QuranAudioService();
+    return Container(
+      decoration: BoxDecoration(
+        color: _isDarkMode ? Color(0xFF0F172A) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _isDarkMode ? Color(0xFF334155) : Color(0xFFE5E7EB),
+          width: 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.record_voice_over, color: Color(0xFF10B981), size: 24),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pilih Qori (Murottal)',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _isDarkMode ? Color(0xFFF1F5F9) : Color(0xFF111827),
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        audioService.selectedQariName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF10B981),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: _isDarkMode ? Color(0xFF1E293B) : Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isDarkMode ? Color(0xFF334155) : Color(0xFFE5E7EB),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  dropdownColor: _isDarkMode ? Color(0xFF1E293B) : Colors.white,
+                  value: audioService.selectedQariName,
+                  icon: Icon(Icons.arrow_drop_down, color: Color(0xFF10B981)),
+                  items: QuranAudioService.qariList.keys.map((String name) {
+                    return DropdownMenuItem<String>(
+                      value: name,
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _isDarkMode ? Color(0xFFF1F5F9) : Color(0xFF1F2937),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) async {
+                    if (newValue != null) {
+                      await audioService.setQari(newValue, QuranAudioService.qariList[newValue]!);
+                      setState(() {});
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

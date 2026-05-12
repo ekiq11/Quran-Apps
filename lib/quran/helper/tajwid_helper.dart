@@ -1,6 +1,5 @@
 // quran/helper/tajwid_helper.dart - ✅ FIXED: 100% Consistent size ON/OFF
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 
 class TajwidHelper {
   // ==================== WARNA TAJWID PROFESIONAL ====================

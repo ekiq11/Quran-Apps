@@ -381,7 +381,6 @@ class LocationDetailSheet extends StatelessWidget {
                       style: TextStyle(
                         fontSize: isSmallScreen ? 13 : 14,
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'monospace',
                         color: Color(0xFF111827),
                       ),
                     ),
@@ -407,7 +406,6 @@ class LocationDetailSheet extends StatelessWidget {
                       style: TextStyle(
                         fontSize: isSmallScreen ? 13 : 14,
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'monospace',
                         color: Color(0xFF111827),
                       ),
                     ),

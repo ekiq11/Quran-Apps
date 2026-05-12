@@ -1,4 +1,5 @@
 // screens/quran_read_page.dart - FIXED: Highlight when marking as last read
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:myquran/quran/helper/jump_ayat.dart';
@@ -35,7 +36,7 @@ class _QuranReadPageState extends State<QuranReadPage> {
   final QuranAudioService _audioService = QuranAudioService();
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _ayahKeys = {};
-  
+
   SurahModel? _surah;
   bool _isLoading = true;
   double _fontSize = 28.0;
@@ -50,18 +51,21 @@ class _QuranReadPageState extends State<QuranReadPage> {
   bool _showNavigationFABs = false;
   String? _nextSurahName;
   String? _previousSurahName;
-  
+
   int? _lastReadAyah;
   int? _targetAyah;
   bool _isFromLastRead = false;
   bool _hasScrolledToTarget = false;
   bool _isScrolling = false;
-  
+
   bool _isAudioPlaying = false;
   String? _currentPlayingAyah;
 
   int? _currentVisibleAyah;
   DateTime? _lastVisibleTime;
+
+  // ✅ FIX: Debounce scroll agar loop O(n) tidak dipanggil setiap frame
+  Timer? _scrollDebouncer;
 
   @override
   void initState() {
@@ -76,8 +80,32 @@ class _QuranReadPageState extends State<QuranReadPage> {
   }
 
   void _setupAudioListener() {
-    _audioService.playerStateStream.listen((state) {
+    _audioService.playerStateStream.listen((state) async {
       if (mounted) {
+        if (state == PlayerState.completed) {
+          if (_currentPlayingAyah != null && !_audioService.isLooping) {
+            int currentAyah = int.tryParse(_currentPlayingAyah!) ?? 0;
+            if (currentAyah > 0 && _surah != null && currentAyah < _surah!.len) {
+              int nextAyah = currentAyah + 1;
+              
+              // Scroll to next ayah
+              final key = _ayahKeys[nextAyah];
+              if (key != null && key.currentContext != null) {
+                Scrollable.ensureVisible(
+                  key.currentContext!,
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                  alignment: 0.3,
+                );
+              }
+              
+              // Play next ayah
+              await _playAyahAudio(nextAyah);
+              return; // return so _currentPlayingAyah is not cleared
+            }
+          }
+        }
+        
         setState(() {
           _isAudioPlaying = state == PlayerState.playing;
           if (state == PlayerState.completed || state == PlayerState.stopped) {
@@ -90,21 +118,25 @@ class _QuranReadPageState extends State<QuranReadPage> {
 
   void _onScroll() {
     if (!_scrollController.hasClients || _surah == null) return;
-    
+
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
     const threshold = 100.0;
-    
+
     if (currentScroll >= (maxScroll - threshold) && !_hasReachedEnd) {
       setState(() => _hasReachedEnd = true);
       _showCompletionDialog();
     }
-    
+
     if (currentScroll < (maxScroll - 300) && _hasReachedEnd) {
       setState(() => _hasReachedEnd = false);
     }
 
-    _detectVisibleAyahAndSave();
+    // ✅ FIX: Debounce 300ms agar loop O(n) tidak dipanggil setiap scroll frame
+    _scrollDebouncer?.cancel();
+    _scrollDebouncer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) _detectVisibleAyahAndSave();
+    });
   }
 
   void _showCompletionDialog() {
@@ -835,10 +867,10 @@ class _QuranReadPageState extends State<QuranReadPage> {
   @override
   void dispose() {
     debugPrint('🗑️  Disposing QuranReadPage...');
-    
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    
+
+    // ✅ FIX: Cancel debouncer sebelum dispose
+    _scrollDebouncer?.cancel();
+
     _audioService.stop().then((_) {
       debugPrint('✅ Audio stopped on page dispose');
     }).catchError((e) {

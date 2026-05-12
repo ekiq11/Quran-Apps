@@ -15,11 +15,18 @@ class IslamicDashboardPage extends StatefulWidget {
 }
 
 class _IslamicDashboardPageState extends State<IslamicDashboardPage> {
+  final ScrollController _scrollController = ScrollController();
   
   @override
   void initState() {
     super.initState();
     _initializeProvider();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _initializeProvider() {
@@ -53,14 +60,23 @@ class _IslamicDashboardPageState extends State<IslamicDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF0F172A) : null,
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppColors.headerGradient,
-          ),
+          gradient: isDarkMode 
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+              )
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: AppColors.headerGradient,
+              ),
         ),
         child: SafeArea(
           child: Consumer<DashboardProvider>(
@@ -68,24 +84,23 @@ class _IslamicDashboardPageState extends State<IslamicDashboardPage> {
               return RefreshIndicator(
                 onRefresh: _handleRefresh,
                 color: Colors.white,
-                backgroundColor: AppColors.primary,
+                backgroundColor: isDarkMode ? const Color(0xFF334155) : AppColors.primary,
                 strokeWidth: 3,
-                // ✅ FIX: Urutan physics yang benar
                 child: CustomScrollView(
-                  physics: BouncingScrollPhysics(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  // ✅ OPTIMASI: Tambahkan cacheExtent untuk smooth scrolling
                   cacheExtent: 500,
                   slivers: [
-                    // ✅ OPTIMASI: Wrap dengan RepaintBoundary
                     SliverToBoxAdapter(
                       child: RepaintBoundary(
-                        child: DashboardHeader(),
+                        child: DashboardHeader(
+                          scrollController: _scrollController,
+                        ),
                       ),
                     ),
-                    // ✅ HAPUS FadeTransition - tidak perlu untuk konten kosong
-                    SliverPadding(
+                    const SliverPadding(
                       padding: EdgeInsets.only(bottom: 20),
                       sliver: SliverToBoxAdapter(
                         child: SizedBox.shrink(),

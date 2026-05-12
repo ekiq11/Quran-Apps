@@ -53,7 +53,6 @@ class _NotificationDebugPanelState extends State<NotificationDebugPanel> {
               child: Text(
                 _statusText,
                 style: const TextStyle(
-                  fontFamily: 'monospace',
                   fontSize: 12,
                 ),
               ),

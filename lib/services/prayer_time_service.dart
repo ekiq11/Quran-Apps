@@ -28,7 +28,7 @@ class PrayerTimeService {
       if (!forceRefresh) {
         final cached = await _getCachedPrayerTimes();
         if (cached != null) {
-          print('📦 Using cached prayer times');
+          debugPrint('📦 Using cached prayer times');
           return cached;
         }
       }
@@ -112,17 +112,17 @@ class PrayerTimeService {
         try {
           await _autoScheduleNotifications(model.times);
         } catch (e) {
-          print('⚠️ Auto-schedule failed: $e (continuing anyway)');
+          debugPrint('⚠️ Auto-schedule failed: $e (continuing anyway)');
         }
       }
 
       return model;
     } catch (e) {
-      print('❌ Error calculating prayer times: $e');
+      debugPrint('❌ Error calculating prayer times: $e');
       
       final cached = await _getCachedPrayerTimes(ignoreExpiry: true);
       if (cached != null) {
-        print('📦 Using expired cache due to error');
+        debugPrint('📦 Using expired cache due to error');
         return cached;
       }
       
@@ -220,7 +220,7 @@ class PrayerTimeService {
   // ✅ CRITICAL: Save prayer times to SharedPreferences
   Future<void> _savePrayerTimesToPrefs(Map<String, TimeOfDay> times) async {
     try {
-      print('💾 Saving prayer times to SharedPreferences...');
+      debugPrint('💾 Saving prayer times to SharedPreferences...');
       
       final prefs = await SharedPreferences.getInstance();
       
@@ -241,26 +241,26 @@ class PrayerTimeService {
           await prefs.setInt('tilawah_duha_minute', time.minute);
         }
         
-        print('   ✅ $prayerName: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
+        debugPrint('   ✅ $prayerName: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
       }
       
       // Save timestamp
       await prefs.setInt('prayer_times_last_updated', DateTime.now().millisecondsSinceEpoch);
       
-      print('✅ Prayer times saved to SharedPreferences (${times.length} times)');
+      debugPrint('✅ Prayer times saved to SharedPreferences (${times.length} times)');
       
     } catch (e) {
-      print('❌ Error saving prayer times to prefs: $e');
+      debugPrint('❌ Error saving prayer times to prefs: $e');
     }
   }
 
   // ✅ CRITICAL: Auto-schedule notifications
   Future<void> _autoScheduleNotifications(Map<String, TimeOfDay> prayerTimes) async {
     try {
-      print('');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('📅 AUTO-SCHEDULING NOTIFICATIONS');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('📅 AUTO-SCHEDULING NOTIFICATIONS');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
       final prefs = await SharedPreferences.getInstance();
       
@@ -296,13 +296,13 @@ class PrayerTimeService {
       // Save last schedule time
       await prefs.setInt('last_notification_schedule', DateTime.now().millisecondsSinceEpoch);
       
-      print('✅ Notifications auto-scheduled successfully!');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('');
+      debugPrint('✅ Notifications auto-scheduled successfully!');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
       
     } catch (e, stack) {
-      print('❌ Error auto-scheduling notifications: $e');
-      print('Stack: $stack');
+      debugPrint('❌ Error auto-scheduling notifications: $e');
+      debugPrint('Stack: $stack');
       rethrow;
     }
   }
@@ -323,19 +323,19 @@ class PrayerTimeService {
         if (model.lastUpdated.day != now.day || 
             model.lastUpdated.month != now.month ||
             model.lastUpdated.year != now.year) {
-          print('📦 Prayer times cache expired (different day)');
+          debugPrint('📦 Prayer times cache expired (different day)');
           return null;
         }
         
         if (now.difference(model.lastUpdated) > _cacheDuration) {
-          print('📦 Prayer times cache expired (time limit)');
+          debugPrint('📦 Prayer times cache expired (time limit)');
           return null;
         }
       }
       
       return model;
     } catch (e) {
-      print('❌ Error reading cached prayer times: $e');
+      debugPrint('❌ Error reading cached prayer times: $e');
       return null;
     }
   }
@@ -345,9 +345,9 @@ class PrayerTimeService {
       final prefs = await SharedPreferences.getInstance();
       final jsonStr = jsonEncode(model.toJson());
       await prefs.setString(_keyPrayerTimes, jsonStr);
-      print('✅ Prayer times cached successfully');
+      debugPrint('✅ Prayer times cached successfully');
     } catch (e) {
-      print('❌ Error caching prayer times: $e');
+      debugPrint('❌ Error caching prayer times: $e');
     }
   }
 
@@ -355,16 +355,16 @@ class PrayerTimeService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyPrayerTimes);
-      print('✅ Prayer times cache cleared');
+      debugPrint('✅ Prayer times cache cleared');
     } catch (e) {
-      print('❌ Error clearing prayer times cache: $e');
+      debugPrint('❌ Error clearing prayer times cache: $e');
     }
   }
 
   // ✅ MANUAL SCHEDULE - Called from notification settings page
   Future<void> scheduleNotificationsManually(PrayerTimeModel model) async {
     try {
-      print('📅 Manually scheduling notifications from prayer times...');
+      debugPrint('📅 Manually scheduling notifications from prayer times...');
       
       // Get user preferences for tilawah times
       final prefs = await SharedPreferences.getInstance();
@@ -390,9 +390,9 @@ class PrayerTimeService {
       // Save to SharedPreferences
       await _savePrayerTimesToPrefs(model.times);
       
-      print('✅ Notifications scheduled manually');
+      debugPrint('✅ Notifications scheduled manually');
     } catch (e) {
-      print('❌ Error scheduling notifications manually: $e');
+      debugPrint('❌ Error scheduling notifications manually: $e');
       rethrow;
     }
   }
@@ -425,11 +425,11 @@ class PrayerTimeService {
 
   Future<void> rescheduleNotifications() async {
     try {
-      print('🔄 Rescheduling notifications...');
-      final model = await calculatePrayerTimes(forceRefresh: true, autoSchedule: true);
-      print('✅ Notifications rescheduled with latest prayer times');
+      debugPrint('🔄 Rescheduling notifications...');
+      await calculatePrayerTimes(forceRefresh: true, autoSchedule: true);
+      debugPrint('✅ Notifications rescheduled with latest prayer times');
     } catch (e) {
-      print('❌ Error rescheduling notifications: $e');
+      debugPrint('❌ Error rescheduling notifications: $e');
     }
   }
 
@@ -500,7 +500,7 @@ class PrayerTimeService {
         lastUpdated: DateTime.now(),
       );
     } catch (e) {
-      print('❌ Error getting prayer times for date: $e');
+      debugPrint('❌ Error getting prayer times for date: $e');
       return PrayerTimeModel.fallback();
     }
   }
@@ -526,15 +526,15 @@ class PrayerTimeService {
       }
       
       if (times.isNotEmpty) {
-        print('✅ Loaded ${times.length} prayer times from storage');
+        debugPrint('✅ Loaded ${times.length} prayer times from storage');
       } else {
-        print('⚠️ No prayer times found in storage');
+        debugPrint('⚠️ No prayer times found in storage');
       }
       
       return times;
       
     } catch (e) {
-      print('❌ Error loading saved prayer times: $e');
+      debugPrint('❌ Error loading saved prayer times: $e');
       return {};
     }
   }

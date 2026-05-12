@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:myquran/dzikir/model/model_dzikir.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 class DzikirShareFullScreenPage extends StatefulWidget {
   final Dzikir dzikir;
@@ -122,9 +123,11 @@ class _DzikirShareFullScreenPageState extends State<DzikirShareFullScreenPage> {
 
       if (!mounted) return;
 
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text: '${widget.dzikir.nama}\nDzikir ${widget.type == 'pagi' ? 'Pagi' : 'Petang'}\n\nDibagikan dari Bekal Muslim',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(imagePath)],
+          text: '${widget.dzikir.nama}\nDzikir ${widget.type == 'pagi' ? 'Pagi' : 'Petang'}\n\nDibagikan dari Bekal Muslim',
+        ),
       );
 
       if (mounted) {
