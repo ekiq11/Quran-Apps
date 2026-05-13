@@ -449,7 +449,7 @@ class NotificationManager {
     }
   }
 
-  static Future<void> _saveNotificationToHistory(Map<String, dynamic> data) async {
+  static Future<void> _saveNotificationToHistory(Map<String, dynamic> data, {bool isScheduled = false, int? scheduledTime}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString(_keyNotificationHistory);
@@ -463,11 +463,13 @@ class NotificationManager {
       final notifId = data['id'] as String;
       final existingIndex = history.indexWhere((item) => item['id'] == notifId);
       
+      final timeToUse = scheduledTime ?? DateTime.now().millisecondsSinceEpoch;
+
       if (existingIndex != -1) {
         history[existingIndex] = {
           ...history[existingIndex],
-          'isScheduled': false,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'isScheduled': isScheduled,
+          'timestamp': timeToUse,
           'isRead': false,
         };
       } else {
@@ -476,9 +478,9 @@ class NotificationManager {
           'title': data['title'] ?? 'Notifikasi',
           'body': data['body'] ?? '',
           'type': data['notifType'] ?? 9,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'timestamp': timeToUse,
           'isRead': false,
-          'isScheduled': false,
+          'isScheduled': isScheduled,
         };
         
         history.add(notificationData);
@@ -503,8 +505,40 @@ class NotificationManager {
     }
   }
 
+  static Future<void> checkFiredScheduledNotifications() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyJson = prefs.getString(_keyNotificationHistory);
+      if (historyJson == null) return;
+      
+      final List<dynamic> decoded = jsonDecode(historyJson);
+      List<Map<String, dynamic>> history = decoded.cast<Map<String, dynamic>>();
+      
+      bool changed = false;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      for (var item in history) {
+        if (item['isScheduled'] == true) {
+          final timestamp = item['timestamp'] as int? ?? 0;
+          if (timestamp <= now) {
+            item['isScheduled'] = false;
+            changed = true;
+          }
+        }
+      }
+      
+      if (changed) {
+        await prefs.setString(_keyNotificationHistory, jsonEncode(history));
+        debugPrint('   🔄 Auto-fired scheduled notifications updated in history');
+      }
+    } catch (e) {
+      debugPrint('   ❌ Error checking fired notifications: $e');
+    }
+  }
+
   static Future<void> _forceUpdateBadgeCount() async {
     try {
+      await checkFiredScheduledNotifications(); // Check if any scheduled notification fired
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString(_keyNotificationHistory);
       final readIdsJson = prefs.getString(_keyReadNotifications);
@@ -986,6 +1020,12 @@ class NotificationManager {
       'motivationalQuote': motivationalQuote,
       'notifType': _getNotificationTypeIndex(name),
     });
+
+    await _saveNotificationToHistory(
+      jsonDecode(payload),
+      isScheduled: true,
+      scheduledTime: scheduled.millisecondsSinceEpoch,
+    );
     
     await _notifications.zonedSchedule(
       _notifIds[name]!,
@@ -1041,6 +1081,13 @@ class NotificationManager {
     final title = '$emoji Waktu Dzikir $type';
     final id = 'Dzikir${type}_${scheduled.millisecondsSinceEpoch}';
     
+    final payload = jsonEncode({'id': id, 'type': 'dzikir', 'name': type, 'title': title, 'body': quote, 'notifType': 7});
+    await _saveNotificationToHistory(
+      jsonDecode(payload),
+      isScheduled: true,
+      scheduledTime: scheduled.millisecondsSinceEpoch,
+    );
+    
     await _notifications.zonedSchedule(
       type == 'Pagi' ? _notifIds['DzikirPagi']! : _notifIds['DzikirPetang']!,
       title,
@@ -1069,7 +1116,7 @@ class NotificationManager {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'id': id, 'type': 'dzikir', 'name': type, 'title': title, 'body': quote, 'notifType': 7}),
+      payload: payload,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -1097,6 +1144,13 @@ class NotificationManager {
     final notifId = type == 'Pagi' ? _notifIds['TilawahPagi']! 
         : type == 'Siang' ? _notifIds['TilawahSiang']! 
         : _notifIds['TilawahMalam']!;
+    
+    final payload = jsonEncode({'id': id, 'type': 'tilawah', 'name': type, 'title': title, 'body': body, 'lastRead': lastRead?.toJson(), 'notifType': 8});
+    await _saveNotificationToHistory(
+      jsonDecode(payload),
+      isScheduled: true,
+      scheduledTime: scheduled.millisecondsSinceEpoch,
+    );
     
     await _notifications.zonedSchedule(
       notifId,
@@ -1126,7 +1180,7 @@ class NotificationManager {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'id': id, 'type': 'tilawah', 'name': type, 'title': title, 'body': body, 'lastRead': lastRead?.toJson(), 'notifType': 8}),
+      payload: payload,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -1143,6 +1197,13 @@ class NotificationManager {
     final emoji = type == 'Pagi' ? '🤲' : '🌟';
     final title = '$emoji Waktu Doa $type';
     final id = 'Doa${type}_${scheduled.millisecondsSinceEpoch}';
+    
+    final payload = jsonEncode({'id': id, 'type': 'doa', 'name': type, 'title': title, 'body': quote, 'notifType': 10});
+    await _saveNotificationToHistory(
+      jsonDecode(payload),
+      isScheduled: true,
+      scheduledTime: scheduled.millisecondsSinceEpoch,
+    );
     
     await _notifications.zonedSchedule(
       type == 'Pagi' ? _notifIds['DoaPagi']! : _notifIds['DoaPetang']!,
@@ -1172,7 +1233,7 @@ class NotificationManager {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'id': id, 'type': 'doa', 'name': type, 'title': title, 'body': quote, 'notifType': 10}),
+      payload: payload,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -1183,9 +1244,9 @@ class NotificationManager {
 
   int _getNotificationTypeIndex(String prayerName) {
     switch (prayerName.toLowerCase()) {
-      case 'tahajud': return 9;   // ✅ NEW
+      case 'tahajud': return 10;   // ✅ FIXED
       case 'subuh': return 0;
-      case 'duha': return 11;      // ✅ NEW  
+      case 'duha': return 11;      // ✅ FIXED
       case 'dzuhur': return 1;
       case 'ashar': return 2;
       case 'maghrib': return 3;

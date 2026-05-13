@@ -248,6 +248,8 @@ class NotificationService {
   /// - After deleting notifications
   Future<void> updateBadgeCountManual() async {
     try {
+      await NotificationManager.checkFiredScheduledNotifications();
+      
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString(_keyNotificationHistory);
       final readIdsJson = prefs.getString(_keyReadNotifications);
@@ -376,13 +378,21 @@ enum NotificationType {
   dzikir, 
   quran, 
   doa, 
-  system;
+  system,
+  
+  // New prayer times
+  tahajud,
+  duha;
 
   /// Get icon for notification type
   IconData get icon {
     switch (this) {
+      case NotificationType.tahajud:
+        return Icons.nights_stay;
       case NotificationType.subuh:
         return Icons.wb_twilight;
+      case NotificationType.duha:
+        return Icons.wb_sunny_outlined;
       case NotificationType.dzuhur:
         return Icons.wb_sunny;
       case NotificationType.ashar:
@@ -407,8 +417,12 @@ enum NotificationType {
   /// Get color for notification type
   Color get color {
     switch (this) {
+      case NotificationType.tahajud:
+        return Color(0xFF4F46E5); // Indigo
       case NotificationType.subuh:
         return Color(0xFF8B5CF6); // Purple
+      case NotificationType.duha:
+        return Color(0xFFFBBF24); // Yellow
       case NotificationType.dzuhur:
         return Color(0xFFF59E0B); // Amber
       case NotificationType.ashar:
@@ -433,8 +447,12 @@ enum NotificationType {
   /// Get display name for notification type
   String get displayName {
     switch (this) {
+      case NotificationType.tahajud:
+        return 'Tahajud';
       case NotificationType.subuh:
         return 'Subuh';
+      case NotificationType.duha:
+        return 'Duha';
       case NotificationType.dzuhur:
         return 'Dzuhur';
       case NotificationType.ashar:
@@ -459,8 +477,12 @@ enum NotificationType {
   /// Parse from string
   static NotificationType fromString(String value) {
     switch (value.toLowerCase()) {
+      case 'tahajud':
+        return NotificationType.tahajud;
       case 'subuh':
         return NotificationType.subuh;
+      case 'duha':
+        return NotificationType.duha;
       case 'dzuhur':
         return NotificationType.dzuhur;
       case 'ashar':

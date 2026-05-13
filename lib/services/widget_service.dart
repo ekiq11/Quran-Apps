@@ -22,6 +22,8 @@ class WidgetService {
     required String hijriDate,
     required Duration timeUntilNext,
     Map<String, String>? allPrayerTimes, // { 'Subuh': '04:45', ... }
+    String? lastReadSurah,
+    String? lastReadAyah,
   }) async {
     try {
       // Format countdown
@@ -42,6 +44,14 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('widget_prayer_time', prayerTime);
       await HomeWidget.saveWidgetData<String>('widget_countdown',   countdown);
       await HomeWidget.saveWidgetData<String>('widget_hijri',       hijriDate);
+      
+      // ── Last Read Surah ───────────────────────────────
+      if (lastReadSurah != null) {
+        await HomeWidget.saveWidgetData<String>('widget_last_read_surah', lastReadSurah);
+      }
+      if (lastReadAyah != null) {
+        await HomeWidget.saveWidgetData<String>('widget_last_read_ayah', lastReadAyah);
+      }
 
       // ── All 5 prayer times ────────────────────────────
       if (allPrayerTimes != null) {

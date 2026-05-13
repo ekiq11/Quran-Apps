@@ -48,6 +48,12 @@ class PrayerTimeWidgetProvider : HomeWidgetProvider() {
             views.setTextViewText(R.id.tv_next_prayer_time, nextTime)
             views.setTextViewText(R.id.tv_countdown,        "⏱ $countdown")
 
+            // ── Last Read Surah ───────────────────────────────────
+            val lastReadSurah = widgetData.getString("widget_last_read_surah", "Belum ada data") ?: "Belum ada data"
+            val lastReadAyah  = widgetData.getString("widget_last_read_ayah",  "-") ?: "-"
+            views.setTextViewText(R.id.tv_last_read_surah, lastReadSurah)
+            views.setTextViewText(R.id.tv_last_read_ayah, lastReadAyah)
+
             // ── 5 Prayer times ────────────────────────────────────
             val subuhTime   = widgetData.getString("widget_subuh",   "--:--") ?: "--:--"
             val dzuhurTime  = widgetData.getString("widget_dzuhur",  "--:--") ?: "--:--"

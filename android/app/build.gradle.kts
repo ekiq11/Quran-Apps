@@ -27,7 +27,7 @@ android {
         // ✅ CRITICAL FIX: Turunkan ke 34 untuk exact alarm yang lebih stabil
         targetSdk = 35
         
-        versionCode = 43
+        versionCode = 45
         versionName = "5.1"
         multiDexEnabled = true
 

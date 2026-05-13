@@ -11,11 +11,14 @@ import 'dart:convert';
 // ✅ PINDAHKAN ENUM KE TOP-LEVEL (di luar class)
 enum NotificationType {
   subuh, dzuhur, ashar, maghrib, isya,
-  prayer, dzikir, quran, doa, system;
+  prayer, dzikir, quran, doa, system,
+  tahajud, duha;
 
   IconData get icon {
     switch (this) {
+      case NotificationType.tahajud: return Icons.nights_stay;
       case NotificationType.subuh: return Icons.wb_twilight;
+      case NotificationType.duha: return Icons.wb_sunny_outlined;
       case NotificationType.dzuhur: return Icons.wb_sunny;
       case NotificationType.ashar: return Icons.wb_sunny_outlined;
       case NotificationType.maghrib: return Icons.nights_stay;
@@ -30,7 +33,9 @@ enum NotificationType {
 
   Color get color {
     switch (this) {
+      case NotificationType.tahajud: return Color(0xFF4F46E5);
       case NotificationType.subuh: return Color(0xFF8B5CF6);
+      case NotificationType.duha: return Color(0xFFFBBF24);
       case NotificationType.dzuhur: return Color(0xFFF59E0B);
       case NotificationType.ashar: return Color(0xFFEF4444);
       case NotificationType.maghrib: return Color(0xFFEC4899);
@@ -91,12 +96,16 @@ class NotificationItem {
   };
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    int typeIndex = json['type'] as int? ?? 9;
+    if (typeIndex < 0 || typeIndex >= NotificationType.values.length) {
+      typeIndex = 9; // Fallback to system
+    }
     return NotificationItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      type: NotificationType.values[json['type'] as int],
-      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int),
+      id: json['id'] as String? ?? 'unknown',
+      title: json['title'] as String? ?? 'Notifikasi',
+      body: json['body'] as String? ?? '',
+      type: NotificationType.values[typeIndex],
+      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch),
       isRead: json['isRead'] as bool? ?? false,
       isScheduled: json['isScheduled'] as bool? ?? false,
     );

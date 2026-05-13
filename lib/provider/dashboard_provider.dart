@@ -222,6 +222,8 @@ class DashboardProvider extends ChangeNotifier {
         hijriDate:     hijriDate,
         timeUntilNext: nextPrayer.duration,
         allPrayerTimes: allTimes,
+        lastReadSurah: _lastRead?.surahName ?? 'Belum ada data',
+        lastReadAyah: _lastRead != null ? 'Ayat ${_lastRead!.ayahNumber}' : '-',
       );
     }
   }
