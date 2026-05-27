@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bekal Muslim</string>
+    <string name="widget_description">Tampilkan jadwal sholat 5 waktu di layar utama</string>
+</resources>

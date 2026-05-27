@@ -1,0 +1,20 @@
+
+// quran/screens/quran_main_page.dart
+import 'package:flutter/material.dart';
+import 'package:myquran/quran/screens/list_page.dart';
+
+
+
+class QuranMainPage extends StatelessWidget {
+  final bool autoOpenLastRead;
+
+  const QuranMainPage({
+    Key? key,
+    this.autoOpenLastRead = false,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return QuranListPage(autoOpenLastRead: autoOpenLastRead);
+  }
+}
